@@ -160,7 +160,7 @@ export default function Deckmap() {
   //获取社区并加载
   useState(() => {
     //加载社区
-    axios.get('data/rank2_reshape.json').then(response => {
+    axios.get('data/rank2_reshape_simplify.json').then(response => {
       const rank2_reshape = response.data
       setrank(rank2_reshape)
       //加载可达性
@@ -257,7 +257,7 @@ export default function Deckmap() {
     community_isshow ? new GeoJsonLayer({//社区
       id: 'community',
       data: rank,
-      stroked: true,
+      stroked: false,
       getLineWidth: 200,
       opacity: 0.5,
       getFillColor: f => f.properties.color,
