@@ -25,13 +25,14 @@ export default function Hourlytraj() {
     return (
         <>
             <Col span={24}>
-                <Card title="层次社区" extra={<Tooltip title='Click on the bars to show trajectories.'><InfoCircleOutlined /></Tooltip>}
+                <Card title="层次社区" 
                     bordered={false}>
                     <Collapse defaultActiveKey={['panel1', 'panel2']}>
 
-                        <Panel header="社区可达性" key="panel1">
+                        <Panel header="社区可达性" 
+                        extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} key="panel1">
                             <Row>
-                                平均出行时间（分钟）
+                                【铁路+出租车】平均出行时间（分钟）
                             </Row>
                             <br />
                             <Row>
