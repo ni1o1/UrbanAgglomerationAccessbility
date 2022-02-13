@@ -1,5 +1,5 @@
 /* global window */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { _MapContext as MapContext, StaticMap, NavigationControl, ScaleControl, FlyToInterpolator } from 'react-map-gl';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { _SunLight as SunLight } from '@deck.gl/core';
@@ -133,21 +133,56 @@ export default function Deckmap() {
 */
   //#region
   const [rank, setrank] = useState([])
-  const [vmin, setvmin] = useState(0)
-  const [vmax, setvmax] = useState(1)
+  const [vmin, setvmin] = useState(180)
+  const [vmax, setvmax] = useState(300)
   const [rail, setrail] = useState([])
+  const [railstation, setrailstation] = useState([])
+  const [access_res, setaccess_res] = useState({})
+
+
+  //订阅可达性
+  unsubscribe('access_res')
+  useSubscribe('access_res', function (msg: any, data: any) {
+    regeneraterank(rank,data)
+  });
+  //由可达性获得社区
+  const regeneraterank=(rank,access_res) => {
+    setaccess_res(access_res)
+    const tmp = rank.features.map(f => {
+      let v = f
+      v.properties.access = parseInt(access_res[f.properties.groupname])
+      v.properties.color = cmap(parseInt(access_res[f.properties.groupname]))
+      return v
+    })
+    setrank({type:"FeatureCollection",features:tmp})
+  }
+
   //获取社区并加载
   useState(() => {
+    //加载社区
     axios.get('data/rank2_reshape.json').then(response => {
-      const data = response.data
-      setrank(data)
-      setvmax(data.features.length)
+      const rank2_reshape = response.data
+      setrank(rank2_reshape)
+      //加载可达性
+      return rank2_reshape
+    }).then((rank2_reshape) => { 
+      axios.get('data/access_res.json').then(response => {
+        regeneraterank(rank2_reshape,response.data)
+      })
     })
+    //加载铁路线
     axios.get('data/railway_rail_withname.json').then(response => {
       const data = response.data
       setrail(data)
     })
+    //加载铁路站点
+    axios.get('data/trainstation.json').then(response => {
+      const data = response.data
+      setrailstation(data)
+    })
   }, [])
+
+
   //colormap的设置
   //cmap
   const COLOR_SCALE = scaleLinear()
@@ -159,8 +194,41 @@ export default function Deckmap() {
     .domain([vmin, vmax])
     .range([0, 1]);
   const cmap = (v) => {
-    return COLOR_SCALE(WIDTH_SCALE(v)).match(/\d+/g).map(f => parseInt(f))
+    try {
+      return COLOR_SCALE(WIDTH_SCALE(v)).match(/\d+/g).map(f => parseInt(f))
+    } catch { return null }
   }
+
+  //#endregion
+  /*
+  ---------------Tooltip设置---------------
+  */
+  //#region
+  function getTooltipText(info) {
+
+    if (!info.layer) {
+      return null;
+    } else if (info.layer.id == 'rail') {
+      if (info.index != -1) {
+        const { name } = info.object.properties
+        return { text: `铁路名称:${name}`, "style": { "color": "white" } }
+      }
+      return null;
+    } else if (info.layer.id == 'community') {
+      if (info.index != -1) {
+        const { groupname, index,access } = info.object.properties
+        return { text: `社区名称:${groupname}\n社区编号:${index}\n平均出行时间:${access}分钟`, "style": { "color": "white" } }
+      }
+      return null;
+    } else if (info.layer.id == 'railstation') {
+      if (info.index != -1) {
+        const { name, cityname } = info.object.properties
+        return { text: `站点名称:${name}\n所在城市:${cityname}`, "style": { "color": "white" } }
+      }
+      return null;
+    }
+  }
+  const getTooltip = useCallback(info => getTooltipText(info));
 
   //#endregion
   /*
@@ -192,7 +260,7 @@ export default function Deckmap() {
       stroked: true,
       getLineWidth: 200,
       opacity: 0.5,
-      getFillColor: f => cmap(f.properties.index),
+      getFillColor: f => f.properties.color,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 0],
@@ -201,13 +269,23 @@ export default function Deckmap() {
       id: 'rail',
       data: rail,
       stroked: true,
-      getLineWidth: 800,
-      getLineColor: [165,42,42],
+      getLineWidth: 600,
+      getLineColor: [165, 42, 42],
       opacity: 0.5,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 0],
-    }) : null
+    }) : null,
+    rail_isshow ? new GeoJsonLayer({//社区
+      id: 'railstation',
+      data: railstation,
+      getFillColor: [0, 0, 0],
+      getPointRadius: 1000,
+      opacity: 1,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 0],
+    }) : null,
   ];
   //#endregion
   /*
@@ -221,6 +299,7 @@ export default function Deckmap() {
       initialViewState={viewState}
       controller={{ doubleClickZoom: false, inertia: true, touchRotate: true }}
       style={{ zIndex: 0 }}
+      getTooltip={getTooltip}
       ContextProvider={MapContext.Provider}
       onViewStateChange={vs => { setViewState(vs.viewState) }}
     >

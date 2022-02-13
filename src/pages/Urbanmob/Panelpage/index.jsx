@@ -45,8 +45,8 @@ export default function Panelpage() {
         'overflowY': 'auto'
       }}
     >
-      <SubMenu key="sub1" icon={<span className="iconfont icon-selectarea" />} title="Trajectory">
-        <Menu.Item key="hourlytraj" icon={<span className="iconfont icon-selectarea" />}>Trajectory</Menu.Item>
+      <SubMenu key="sub1" icon={<span className="iconfont icon-selectarea" />} title="层次社区">
+        <Menu.Item key="hourlytraj" icon={<span className="iconfont icon-selectarea" />}>层次社区</Menu.Item>
       </SubMenu>
     </Menu>
     <Button type="text" onClick={toggleCollapsed} style={{ margin: '10px 16px' }}>
