@@ -1,0 +1,11 @@
+.panel {
+    max-height: 94vh;
+    z-index: 1;
+    margin: 10px;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+#deckgl-wrapper {
+    overflow: hidden;
+}
