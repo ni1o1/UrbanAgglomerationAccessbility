@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Col, Card, Collapse, Tooltip, Row, Button, Descriptions, message } from 'antd';
+import { Col, Card, Collapse, Slider, Tooltip, Row, Switch, Button, Descriptions, message } from 'antd';
 import axios from 'axios';
 import {
     InfoCircleOutlined
 } from '@ant-design/icons';
 
 import { useSubscribe, usePublish, useUnsubscribe } from '@/utils/usePubSub';
+import { length } from '@turf/turf'
 
 const { Panel } = Collapse;
 
@@ -75,7 +76,6 @@ function showFloyf(nodename) {
         }
 
         access_res[nodename[i]] = parseInt(res.reduce((a, b) => { return a + b }, 0) / (res.length))
-        if (nodename[i] == '10-2.0') { console.log(res) }
     }
     return access_res
 }
@@ -91,22 +91,26 @@ export default function Hourlytraj() {
     unsubscribe('access_res')
     useSubscribe('access_res', function (msg: any, data: any) {
         setaccess_res(data)
-        console.log(data)
     });
     const [vmin, setvmin] = useState(180)
     const [vmax, setvmax] = useState(300)
 
     //边
-    const [edge_renumbered, setedge_renumbered] = useState([[0, 1, 2],
-    [0, 2, 4], [1, 2, 2], [1, 3, 4], [1, 4, 2], [2, 4, 3], [3, 5, 2], [4, 3, 3], [4, 5, 2]])
-    const [node_renumbered, setnode_renumbered] = useState(['a', 'b', 'c', 'd', 'e', 'f'])
+    const [edge_renumbered, setedge_renumbered] = useState([])
+    const [node_renumbered, setnode_renumbered] = useState([])
+
+    //边
+    const [edge_new, setedge_new] = useState([])
+    const [node_new, setnode_new] = useState([])
 
     //计算可达性
     const calculateaccessbility = () => {
-        const graphA = new Graph(node_renumbered.length);
-        edge_renumbered.map((f) => { graphA.addEdge(f[0], f[1], f[2]); graphA.addEdge(f[1], f[0], f[2]) })
+        const edge_all = edge_renumbered.concat(edge_new)
+        const node_all = node_renumbered.concat(node_new)
+        const graphA = new Graph(node_all.length);
+        edge_all.map((f) => { graphA.addEdge(f[0], f[1], f[2]); graphA.addEdge(f[1], f[0], f[2]) })
         graphA.floyd();
-        const newaccess_res = graphA.showFloyf(node_renumbered);
+        const newaccess_res = graphA.showFloyf(node_all);
         publish('access_res', newaccess_res);
         message.success('计算成功，可达性已更新！')
     }
@@ -122,12 +126,74 @@ export default function Hourlytraj() {
             })
         })
     }, [])
+    //车速km/h
+    const [travelspeed, settravelspeed] = useState(180)
+    //自定义线路站点信息
+    const [linkCollection, setlinkCollection] = useState({
+        type: 'FeatureCollection',
+        features: []
+    });
+    const [stationCollection, setstationCollection] = useState({
+        type: 'FeatureCollection',
+        features: []
+    });
+    unsubscribe('stationCollection')
+    useSubscribe('stationCollection', function (msg: any, data: any) {
+        setstationCollection(data)
+        //处理节点
+        setnode_new(data.features.map(f => '自定义' + f.properties.stationid))
+        //处理边
+        const newedge = []
+        //添加点与社区的边
+        data.features.map(f => {
+            if (f.properties.groupname != null) {
+                //此点的id
+                const newpointid = node_renumbered.length - 1 + f.properties.stationid
+                //社区的id
+                const communityid = node_renumbered.indexOf(f.properties.groupname)
+                //添加双向边
+                newedge.push([newpointid, communityid, 0])
+                newedge.push([communityid, newpointid, 0])
+            }
+        }
+        )
+        //添加点与点之间的边
+        //获取线路数
+        const numberlines = linkCollection.features.length
+        for (let i = 0; i < numberlines; i++) {
+            let thislinestation = data.features.filter((a) => a.properties.index == i)
+            thislinestation = thislinestation.sort(function (a, b) {
+                return a.properties.location - b.properties.location
+            })
+            for (let j = 0; j < thislinestation.length - 1; j++) {
+                //此点的id
+                const newpointid1 = node_renumbered.length - 1 + thislinestation[j].properties.stationid
+                //下一点的id
+                const newpointid2 = node_renumbered.length - 1 + thislinestation[j + 1].properties.stationid
+                //距离
+                const distance = Math.abs(thislinestation[j + 1].properties.location - thislinestation[j].properties.location)
+                //出行时长
+                const traveltime = 60 * distance / travelspeed
+                //添加双向边
+                newedge.push([newpointid1, newpointid2, traveltime])
+                newedge.push([newpointid2, newpointid1, traveltime])
+            }
+        }
+
+
+        setedge_new(newedge)
+    });
+    unsubscribe('linkCollection')
+    useSubscribe('linkCollection', function (msg: any, data: any) {
+        setlinkCollection(data)
+
+    });
     return (
         <>
             <Col span={24}>
                 <Card title="社区可达性"
                     bordered={false}>
-                    <Collapse defaultActiveKey={['panel1', 'panel2']}>
+                    <Collapse defaultActiveKey={['panel1', 'panel2', 'panel3']}>
 
                         <Panel header="社区可达性"
                             extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} key="panel1">
@@ -147,11 +213,51 @@ export default function Hourlytraj() {
                                 </Col>
                             </Row>
                         </Panel>
-                        <Panel header="可达性计算" key="panel2">
-                            <Descriptions title="交通拓扑网络信息">
-                                <Descriptions.Item label="节点数量">{node_renumbered.length}</Descriptions.Item>
-                                <Descriptions.Item label="边数量"> {edge_renumbered.length}</Descriptions.Item>
+                        <Panel header="自定义交通网络" key="panel2">
+                            <Descriptions title="交通网络信息">
+                                <Descriptions.Item label="线路数" span={2}>{linkCollection.features.length}条</Descriptions.Item>
+                                <Descriptions.Item label="线路总长" span={2}>{length(linkCollection).toFixed(2)}km</Descriptions.Item>
                             </Descriptions>
+                            <Row>
+                                <Button onClick={() => { publish('startedit', true) }}>添加线路</Button>
+                                <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
+                            </Row>
+                            <br />
+                            <Row>
+                                <Col>
+                                    添加站点:<Switch checkedChildren="开启" unCheckedChildren="关闭" onChange={(v) => { publish('startedit_station', v ? 2 : 1) }}></Switch>
+                                    <Button onClick={() => { publish('deletefeature_station', true) }}>清空站点</Button>
+                                </Col>
+                            </Row>
+                            <br />
+                            <Row>
+                                <Col span={10}>
+                                    运行速度:{travelspeed}km/h
+                                </Col>
+                                <Col span={14}>
+                                    <Slider
+                                        min={30}
+                                        max={400}
+                                        onChange={(v) => {
+                                            settravelspeed(v)
+                                        }}
+                                        value={typeof travelspeed === 'number' ? travelspeed : 0}
+                                        step={5}
+                                    />
+
+                                </Col>
+
+                            </Row>
+                        </Panel>
+                        <Panel header="可达性计算" key="panel3">
+                            <Descriptions title="交通拓扑网络信息">
+                                <Descriptions.Item label="内置节点数量" span={2}>{node_renumbered.length}</Descriptions.Item>
+                                <Descriptions.Item label="内置边数量" span={2}> {edge_renumbered.length}</Descriptions.Item>
+                                <Descriptions.Item label="自定义节点数量" span={2}>{node_new.length}</Descriptions.Item>
+                                <Descriptions.Item label="自定义边数量" span={2}> {edge_new.length}</Descriptions.Item>
+                            </Descriptions>
+
+
                             <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
                         </Panel>
                     </Collapse>

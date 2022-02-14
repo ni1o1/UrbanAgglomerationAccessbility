@@ -10,6 +10,8 @@ import { useInterval } from 'ahooks';
 import axios from 'axios';
 import { GeoJsonLayer } from '@deck.gl/layers';
 import { scaleLinear } from 'd3-scale';
+import { EditableGeoJsonLayer, ViewMode, DrawLineStringMode, DrawPointMode } from 'nebula.gl';
+import { tag, nearestPointOnLine } from '@turf/turf'
 
 const MAPBOX_ACCESS_TOKEN = 'pk.eyJ1IjoibmkxbzEiLCJhIjoiY2t3ZDgzMmR5NDF4czJ1cm84Z3NqOGt3OSJ9.yOYP6pxDzXzhbHfyk3uORg';
 
@@ -20,14 +22,14 @@ export default function Deckmap() {
   */
   //#region
   //管理光强度
-  const [lightintensity, setlightintensity] = useState(2)
+  const [lightintensity, setlightintensity] = useState(5)
   unsubscribe('lightintensity')
   useSubscribe('lightintensity', function (msg: any, data: any) {
     setlightintensity(data)
   });
 
   //管理光角度X
-  const [lightx, setlightx] = useState(1554937300)
+  const [lightx, setlightx] = useState(1555957300)
   unsubscribe('lightx')
   useSubscribe('lightx', function (msg: any, data: any) {
     setlightx(data)
@@ -143,10 +145,10 @@ export default function Deckmap() {
   //订阅可达性
   unsubscribe('access_res')
   useSubscribe('access_res', function (msg: any, data: any) {
-    regeneraterank(rank,data)
+    regeneraterank(rank, data)
   });
   //由可达性获得社区
-  const regeneraterank=(rank,access_res) => {
+  const regeneraterank = (rank, access_res) => {
     setaccess_res(access_res)
     const tmp = rank.features.map(f => {
       let v = f
@@ -154,8 +156,19 @@ export default function Deckmap() {
       v.properties.color = cmap(parseInt(access_res[f.properties.groupname]))
       return v
     })
-    setrank({type:"FeatureCollection",features:tmp})
+    setrank({ type: "FeatureCollection", features: tmp })
   }
+  const [isextrude, setisextrude] = useState(false)
+  const extrudeTools = (
+    <div className="mapboxgl-ctrl-group mapboxgl-ctrl">
+      <button
+        title="communitycontrol"
+        onClick={() => { setisextrude(!isextrude) }}
+        style={{ opacity: isextrude ? 1 : 0.2 }}
+      >
+        <span className="iconfont icon-3d" /></button>
+    </div>
+  );
 
   //获取社区并加载
   useState(() => {
@@ -165,9 +178,9 @@ export default function Deckmap() {
       setrank(rank2_reshape)
       //加载可达性
       return rank2_reshape
-    }).then((rank2_reshape) => { 
+    }).then((rank2_reshape) => {
       axios.get('data/access_res.json').then(response => {
-        regeneraterank(rank2_reshape,response.data)
+        regeneraterank(rank2_reshape, response.data)
       })
     })
     //加载铁路线
@@ -198,6 +211,128 @@ export default function Deckmap() {
       return COLOR_SCALE(WIDTH_SCALE(v)).match(/\d+/g).map(f => parseInt(f))
     } catch { return null }
   }
+  //#endregion
+  /*
+  ---------------绘制铁路图层的设置---------------
+  */
+  //#region
+  const [linkCollection, setlinkCollection] = useState({
+    type: 'FeatureCollection',
+    features: []
+  });
+  const [drawmode, setdrawmode] = useState(1)
+
+  //删除要素时清空要素并设定为ViewMode
+  function deletefeature() {
+    setlinkCollection({
+      type: 'FeatureCollection',
+      features: [],
+    })
+    publish('linkCollection',{
+      type: 'FeatureCollection',
+      features: [],
+    })
+    setstationCollection({
+      type: 'FeatureCollection',
+      features: [],
+    })
+    publish('stationCollection',{
+      type: 'FeatureCollection',
+      features: [],
+    })
+    setrailstation_nearest([])
+  }
+  unsubscribe('deletefeature')
+  useSubscribe('deletefeature', function (msg: any, data: any) {
+    deletefeature()
+  });
+  //开始编辑要素时，清空要素并设定为绘制模式
+  function startedit() {
+    setdrawmode(2)
+  }
+  unsubscribe('startedit')
+  useSubscribe('startedit', function (msg: any, data: any) {
+    startedit()
+  });
+  //编辑成功时，发布选中面信息
+  function handleonedit(e) {
+    let updatedData = e.updatedData
+    const editType = e.editType
+    if ((editType == 'addFeature')) {
+      //为线路添加id
+      const lineid = linkCollection.features.length + 1
+      updatedData.features[updatedData.features.length - 1].properties['lineid'] = lineid
+      setdrawmode(1)
+      setlinkCollection(updatedData)
+      publish('linkCollection',updatedData)
+    }
+  }
+  //#endregion
+  /*
+  ---------------绘制站点图层的设置---------------
+  */
+  //#region
+  const [stationCollection, setstationCollection] = useState({
+    type: 'FeatureCollection',
+    features: []
+  });
+  const [drawmode_station, setdrawmode_station] = useState(1)
+
+  //删除要素时清空要素并设定为ViewMode
+  function deletefeature_station() {
+    setstationCollection({
+      type: 'FeatureCollection',
+      features: [],
+    })
+    setrailstation_nearest([])
+    publish('stationCollection',{
+      type: 'FeatureCollection',
+      features: [],
+    })
+  }
+  unsubscribe('deletefeature_station')
+  useSubscribe('deletefeature_station', function (msg: any, data: any) {
+    deletefeature_station()
+  });
+  //开始编辑要素时，清空要素并设定为绘制模式
+  unsubscribe('startedit_station')
+  useSubscribe('startedit_station', function (msg: any, data: any) {
+    setdrawmode_station(data)
+    setrailstation_nearest([])
+  });
+
+  const [railstation_nearest, setrailstation_nearest] = useState([])
+  //编辑成功时，发布选中面信息
+  function handleonstationedit(e) {
+    const updatedData = e.updatedData
+    const editType = e.editType
+    const pointpos = e.editContext.feature
+    if ((editType == 'addFeature')) {
+      const pointpos1 = updatedData.features[updatedData.features.length - 1]
+      const snapped = nearestPointOnLine(linkCollection, pointpos1)
+      if (snapped.properties.dist < 1) {
+        //计算点处于哪条线上
+        const s = linkCollection.features.map(l=> nearestPointOnLine(l, snapped).properties.dist)
+        const index = s.indexOf(Math.min.apply(Math, s))
+        //计算点处于哪个小区上
+        const a= tag(snapped,rank,'groupname','groupname').properties.groupname
+        //计算点id
+        const stationid = stationCollection.features.length + 1
+        updatedData.features[updatedData.features.length - 1] = snapped
+        updatedData.features[updatedData.features.length - 1].properties['stationid'] = stationid
+        updatedData.features[updatedData.features.length - 1].properties['index'] = index
+        updatedData.features[updatedData.features.length - 1].properties['groupname'] = a
+        setstationCollection(updatedData)
+        publish('stationCollection',updatedData)
+      }
+    } else {
+      //判断是否在线附近，如果是，则显示线上最近点
+      const snapped = nearestPointOnLine(linkCollection, pointpos)
+      if (snapped.properties.dist < 1) {
+        setrailstation_nearest(snapped)
+      }
+    }
+  }
 
   //#endregion
   /*
@@ -205,7 +340,6 @@ export default function Deckmap() {
   */
   //#region
   function getTooltipText(info) {
-
     if (!info.layer) {
       return null;
     } else if (info.layer.id == 'rail') {
@@ -216,7 +350,7 @@ export default function Deckmap() {
       return null;
     } else if (info.layer.id == 'community') {
       if (info.index != -1) {
-        const { groupname, index,access } = info.object.properties
+        const { groupname, index, access } = info.object.properties
         return { text: `社区名称:${groupname}\n社区编号:${index}\n平均出行时间:${access}分钟`, "style": { "color": "white" } }
       }
       return null;
@@ -224,6 +358,18 @@ export default function Deckmap() {
       if (info.index != -1) {
         const { name, cityname } = info.object.properties
         return { text: `站点名称:${name}\n所在城市:${cityname}`, "style": { "color": "white" } }
+      }
+      return null;
+    } else if (info.layer.id == 'addedtrain') {
+      if (info.index != -1) {
+        const { lineid } = info.object.properties
+        return { text: `自定义线路\n线路ID:${lineid}`, "style": { "color": "white" } }
+      }
+      return null;
+    } else if (info.layer.id == 'addedstation') {
+      if (info.index != -1) {
+        const {location,stationid,index,groupname } = info.object.properties
+        return { text: `自定义站点\n站点ID:${stationid}\n距线路起点距离:${location.toFixed(2)}km\n所属线路ID:${index+1}\n所在社区ID:${groupname}`, "style": { "color": "white" } }
       }
       return null;
     }
@@ -261,11 +407,13 @@ export default function Deckmap() {
       getLineWidth: 200,
       opacity: 0.5,
       getFillColor: f => f.properties.color,
+      getElevation: f => (500 / f.properties.access) ** 10,
+      extruded: isextrude,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 0],
     }) : null,
-    rail_isshow ? new GeoJsonLayer({//社区
+    rail_isshow ? new GeoJsonLayer({//高铁线路
       id: 'rail',
       data: rail,
       stroked: true,
@@ -276,7 +424,7 @@ export default function Deckmap() {
       autoHighlight: true,
       highlightColor: [255, 255, 0],
     }) : null,
-    rail_isshow ? new GeoJsonLayer({//社区
+    rail_isshow ? new GeoJsonLayer({//高铁站点
       id: 'railstation',
       data: railstation,
       getFillColor: [0, 0, 0],
@@ -286,6 +434,35 @@ export default function Deckmap() {
       autoHighlight: true,
       highlightColor: [255, 255, 0],
     }) : null,
+    new EditableGeoJsonLayer({//Draw线路图层
+      id: 'addedtrain',
+      data: linkCollection,
+      mode: drawmode == 1 ? ViewMode : DrawLineStringMode,
+      onEdit: handleonedit,
+      getLineColor: [0, 0, 247],
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 0],
+    }),
+    new EditableGeoJsonLayer({//Draw车站图层
+      id: 'addedstation',
+      data: stationCollection,
+      mode: drawmode_station == 1 ? ViewMode : DrawPointMode,
+      onEdit: handleonstationedit,
+      getLineColor: [0, 0, 247],
+      getLineWidth: 20,
+      pickable: true,
+      autoHighlight: true,
+      highlightColor: [255, 255, 0],
+    }),
+    new GeoJsonLayer({//Draw车站图层（离线路最近点）
+      id: 'railstation_nearest',
+      data: railstation_nearest,
+      getFillColor: [0, 0, 247],
+      getLineColor: [0, 0, 247],
+      getPointRadius: 600,
+      opacity: 0.3,
+    })
   ];
   //#endregion
   /*
@@ -313,6 +490,7 @@ export default function Deckmap() {
       <div className='mapboxgl-ctrl-bottom-right' style={{ bottom: '80px' }}>
         <NavigationControl onViewportChange={viewport => setViewState(viewport)} />
         {cameraTools}
+        {extrudeTools}
         {layerTools}
       </div>
 

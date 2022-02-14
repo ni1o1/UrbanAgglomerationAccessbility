@@ -6,7 +6,7 @@
 @font-face {
     font-family: 'iconfont';
     /* Project id 3180341 */
-    src: url('//at.alicdn.com/t/font_3180341_w71f3gblr5.woff2?t=1644722100050') format('woff2'), url('//at.alicdn.com/t/font_3180341_w71f3gblr5.woff?t=1644722100050') format('woff'), url('//at.alicdn.com/t/font_3180341_w71f3gblr5.ttf?t=1644722100050') format('truetype');
+    src: url('//at.alicdn.com/t/font_3180341_36kwfj8anom.woff2?t=1644802848567') format('woff2'), url('//at.alicdn.com/t/font_3180341_36kwfj8anom.woff?t=1644802848567') format('woff'), url('//at.alicdn.com/t/font_3180341_36kwfj8anom.ttf?t=1644802848567') format('truetype');
 }
 
 .iconfont {
@@ -27,4 +27,8 @@
 
 .icon-rail:before {
     content: "\e638";
+}
+
+.icon-3d:before {
+    content: "\e625";
 }
