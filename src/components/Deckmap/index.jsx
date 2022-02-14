@@ -140,22 +140,45 @@ export default function Deckmap() {
   const [vmax, setvmax] = useState(300)
   const [rail, setrail] = useState([])
   const [railstation, setrailstation] = useState([])
+  const [origin_access_res, setorigin_access_res] = useState({})
   const [access_res, setaccess_res] = useState({})
+  const [diff, setdiff] = useState({})
+  const [showdiff, setshowdiff] = useState(false)
 
+  unsubscribe('showdiff')
+  useSubscribe('showdiff', function (msg: any, data: any) {
+    setshowdiff(data)
+    if (data){
+    regeneraterank(rank, diff, 0, 60)
+  }else{
+    regeneraterank(rank, access_res, 180, 300)
+  }
+  })
   //订阅可达性
   unsubscribe('kedaxing')
   useSubscribe('kedaxing', function (msg: any, data: any) {
     console.log('可达性计算成功')
-    regeneraterank(rank, data)
+    setaccess_res(data)
+    //计算差异
+    const diff = {}
+    Object.keys(data).forEach(key => {
+      diff[key] = origin_access_res[key] - data[key]
+    })
+    setdiff(diff)
+    if (!showdiff) {
+      regeneraterank(rank, data, 180, 300)
+    } else {
+      regeneraterank(rank, diff, 0, 60)
+    }
   });
 
   //由可达性获得社区
-  const regeneraterank = (rank, access_res) => {
-    setaccess_res(access_res)
+  const regeneraterank = (rank, access_res, vmin, vmax) => {
+
     const tmp = rank.features.map(f => {
       let v = f
       v.properties.access = parseInt(access_res[f.properties.groupname])
-      v.properties.color = cmap(parseInt(access_res[f.properties.groupname]))
+      v.properties.color = cmap(parseInt(access_res[f.properties.groupname]), vmin, vmax)
       return v
     })
     setrank({ type: "FeatureCollection", features: tmp })
@@ -172,6 +195,7 @@ export default function Deckmap() {
     </div>
   );
 
+
   //获取社区并加载
   useState(() => {
     //加载社区
@@ -182,7 +206,8 @@ export default function Deckmap() {
       return rank2_reshape
     }).then((rank2_reshape) => {
       axios.get('data/access_res.json').then(response => {
-        regeneraterank(rank2_reshape, response.data)
+        setorigin_access_res(response.data)
+        regeneraterank(rank2_reshape, response.data, 180, 300)
       })
     })
     //加载铁路线
@@ -200,15 +225,16 @@ export default function Deckmap() {
 
   //colormap的设置
   //cmap
-  const COLOR_SCALE = scaleLinear()
-    .domain([0, 0.25, 0.5, 0.75, 1])
-    .range(['#9DCC42', '#FFFE03', '#F7941D', '#E9420E', '#FF0000']);
-  //norm
-  const WIDTH_SCALE = scaleLinear()
-    .clamp(true)
-    .domain([vmin, vmax])
-    .range([0, 1]);
-  const cmap = (v) => {
+
+  const cmap = (v, vmin, vmax) => {
+    const COLOR_SCALE = scaleLinear()
+      .domain([0, 0.25, 0.5, 0.75, 1])
+      .range(['#9DCC42', '#FFFE03', '#F7941D', '#E9420E', '#FF0000']);
+    //norm
+    const WIDTH_SCALE = scaleLinear()
+      .clamp(true)
+      .domain([vmin, vmax])
+      .range([0, 1]);
     try {
       return COLOR_SCALE(WIDTH_SCALE(v)).match(/\d+/g).map(f => parseInt(f))
     } catch { return null }
@@ -230,7 +256,7 @@ export default function Deckmap() {
       type: 'FeatureCollection',
       features: [],
     })
-    publish('linkCollection',{
+    publish('linkCollection', {
       type: 'FeatureCollection',
       features: [],
     })
@@ -238,7 +264,7 @@ export default function Deckmap() {
       type: 'FeatureCollection',
       features: [],
     })
-    publish('stationCollection',{
+    publish('stationCollection', {
       type: 'FeatureCollection',
       features: [],
     })
@@ -270,7 +296,7 @@ export default function Deckmap() {
       updatedData.features[updatedData.features.length - 1].properties['lineid'] = lineid
       setdrawmode(1)
       setlinkCollection(updatedData)
-      publish('linkCollection',updatedData)
+      publish('linkCollection', updatedData)
     }
   }
   //#endregion
@@ -291,7 +317,7 @@ export default function Deckmap() {
       features: [],
     })
     setrailstation_nearest([])
-    publish('stationCollection',{
+    publish('stationCollection', {
       type: 'FeatureCollection',
       features: [],
     })
@@ -318,10 +344,10 @@ export default function Deckmap() {
       const snapped = nearestPointOnLine(linkCollection, pointpos1)
       if (snapped.properties.dist < 2) {
         //计算点处于哪条线上
-        const s = linkCollection.features.map(l=> nearestPointOnLine(l, snapped).properties.dist)
+        const s = linkCollection.features.map(l => nearestPointOnLine(l, snapped).properties.dist)
         const index = s.indexOf(Math.min.apply(Math, s))
         //计算点处于哪个小区上
-        const a= tag(snapped,rank,'groupname','groupname').properties.groupname
+        const a = tag(snapped, rank, 'groupname', 'groupname').properties.groupname
         //计算点id
         const stationid = stationCollection.features.length + 1
         updatedData.features[updatedData.features.length - 1] = snapped
@@ -329,7 +355,7 @@ export default function Deckmap() {
         updatedData.features[updatedData.features.length - 1].properties['index'] = index
         updatedData.features[updatedData.features.length - 1].properties['groupname'] = a
         setstationCollection(updatedData)
-        publish('stationCollection',updatedData)
+        publish('stationCollection', updatedData)
       }
     } else {
       //判断是否在线附近，如果是，则显示线上最近点
@@ -357,7 +383,7 @@ export default function Deckmap() {
     } else if (info.layer.id == 'community') {
       if (info.index != -1) {
         const { groupname, index, access } = info.object.properties
-        return { text: `社区名称:${groupname}\n社区编号:${index}\n平均出行时间:${access}分钟`, "style": { "color": "white" } }
+        return { text: showdiff?`社区名称:${groupname}\n社区编号:${index}\n平均出行时间减少:${access}分钟`:`社区名称:${groupname}\n社区编号:${index}\n平均出行时间:${access}分钟`, "style": { "color": "white" } }
       }
       return null;
     } else if (info.layer.id == 'railstation') {
@@ -374,8 +400,8 @@ export default function Deckmap() {
       return null;
     } else if (info.layer.id == 'addedstation') {
       if (info.index != -1) {
-        const {location,stationid,index,groupname } = info.object.properties
-        return { text: `自定义站点\n站点ID:${stationid}\n距线路起点距离:${location.toFixed(2)}km\n所属线路ID:${index+1}\n所在社区ID:${groupname}`, "style": { "color": "white" } }
+        const { location, stationid, index, groupname } = info.object.properties
+        return { text: `自定义站点\n站点ID:${stationid}\n距线路起点距离:${location.toFixed(2)}km\n所属线路ID:${index + 1}\n所在社区ID:${groupname}`, "style": { "color": "white" } }
       }
       return null;
     }
@@ -440,7 +466,7 @@ export default function Deckmap() {
       autoHighlight: true,
       highlightColor: [255, 255, 0],
     }) : null,
-    new EditableGeoJsonLayer({//Draw线路图层
+    rail_isshow ? new EditableGeoJsonLayer({//Draw线路图层
       id: 'addedtrain',
       data: linkCollection,
       mode: drawmode == 1 ? ViewMode : DrawLineStringMode,
@@ -449,8 +475,8 @@ export default function Deckmap() {
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 0],
-    }),
-    new EditableGeoJsonLayer({//Draw车站图层
+    }): null,
+    rail_isshow ?new EditableGeoJsonLayer({//Draw车站图层
       id: 'addedstation',
       data: stationCollection,
       mode: DrawPointMode,
@@ -460,15 +486,15 @@ export default function Deckmap() {
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 0],
-    }),
-    new GeoJsonLayer({//Draw车站图层（离线路最近点）
+    }): null,
+    rail_isshow ?new GeoJsonLayer({//Draw车站图层（离线路最近点）
       id: 'railstation_nearest',
       data: railstation_nearest,
       getFillColor: [0, 0, 247],
       getLineColor: [0, 0, 247],
       getPointRadius: 600,
       opacity: 0.3,
-    })
+    }): null
   ];
   //#endregion
   /*

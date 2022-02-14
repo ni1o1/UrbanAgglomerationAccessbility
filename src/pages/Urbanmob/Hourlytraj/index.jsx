@@ -17,13 +17,8 @@ const { Panel } = Collapse;
 export default function Hourlytraj() {
     const unsubscribe = useUnsubscribe();//清除更新组件重复订阅的副作用
     const publish = usePublish();
-    const [access_res, setaccess_res] = useState({})
 
-    //订阅可达性
-    unsubscribe('access_res')
-    useSubscribe('access_res', function (msg: any, data: any) {
-        setaccess_res(data)
-    });
+
     const [vmin, setvmin] = useState(180)
     const [vmax, setvmax] = useState(300)
 
@@ -36,27 +31,27 @@ export default function Hourlytraj() {
     const [node_new, setnode_new] = useState([])
 
     //计算可达性
-    const [data=0 , postData] = useWebWorker({
+    const [data = 0, postData] = useWebWorker({
         url: "./js/floyd.worker.js"
-      });
+    });
 
     const calculateaccessbility = () => {
         const edge_all = edge_renumbered.concat(edge_new)
         const node_all = node_renumbered.concat(node_new)
         //发布计算指令
-        postData([edge_all,node_all])
-        message.loading({content:'可达性计算中',key:'cal'})
+        postData([edge_all, node_all])
+        message.loading({ content: '可达性计算中', key: 'cal' })
         //publish('access_res', newaccess_res);
         //message.success('计算成功，可达性已更新！')
     }
-    useEffect(() => { 
-        if (data!=0){
+    useEffect(() => {
+        if (data != 0) {
             publish('kedaxing', data)
-        
-        message.destroy('cal')
-        message.success('计算成功，可达性已更新！')
-    }
-    },[data])
+
+            message.destroy('cal')
+            message.success('计算成功，可达性已更新！')
+        }
+    }, [data])
 
     //获取网络并加载
     useState(() => {
@@ -134,6 +129,11 @@ export default function Hourlytraj() {
         setlinkCollection(data)
 
     });
+    const [showdiff, setshowdiff] = useState(false)
+    const ondiffChange = (v) => {
+        setshowdiff(v)
+        publish('showdiff', v)
+    }
     return (
         <>
             <Col span={24}>
@@ -144,18 +144,18 @@ export default function Hourlytraj() {
                         <Panel header="社区可达性"
                             extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} key="panel1">
                             <Row>
-                                【铁路+出租车】平均出行时间（分钟）
+                                {showdiff ? '【铁路+出租车】平均出行时间减少（分钟）' : '【铁路+出租车】平均出行时间（分钟）'}
                             </Row>
                             <br />
                             <Row>
                                 <Col span={3} style={{ textAlign: 'center' }}>
-                                    {vmin}
+                                    {showdiff ? 0 : 180}
                                 </Col>
                                 <Col span={18}>
                                     <div style={{ height: '20px', width: '100%', backgroundImage: "linear-gradient(to right,#9DCC42, #FFFE03, #F7941D, #E9420E, #FF0000)" }}></div>
                                 </Col>
                                 <Col span={3} style={{ textAlign: 'center' }}>
-                                    {vmax}
+                                    {showdiff ? 60 : 300}
                                 </Col>
                             </Row>
                         </Panel>
@@ -205,7 +205,15 @@ export default function Hourlytraj() {
                             </Descriptions>
 
 
-                            <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
+
+                            <Row>
+                                <Col span={12}>
+                                    <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
+                                </Col>
+                                <Col span={12}>
+                                    显示平均出行时间差异:<Switch onChange={ondiffChange} />
+                                </Col>
+                            </Row>
                         </Panel>
                     </Collapse>
                 </Card>
