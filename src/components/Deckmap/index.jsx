@@ -157,7 +157,6 @@ export default function Deckmap() {
   //订阅可达性
   unsubscribe('kedaxing')
   useSubscribe('kedaxing', function (msg: any, data: any) {
-    console.log('可达性计算成功')
     setaccess_res(data)
     //计算差异
     const diff = {}

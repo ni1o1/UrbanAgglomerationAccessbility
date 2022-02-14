@@ -18,10 +18,10 @@ export default function Header(props) {
         publish('showpanel',!collapsed)
     };
     const menu = (<Menu>
-        <SubMenu title="Mapstyle" icon={<GlobalOutlined />}>
+        <SubMenu key='Mapstyle' title="Mapstyle" icon={<GlobalOutlined />}>
             <Menu.Item key="dark" onClick={() => { publish('mapstyle', "mapbox://styles/mapbox/dark-v10") }}>Dark</Menu.Item>
             <Menu.Item key="light" onClick={() => { publish('mapstyle', "mapbox://styles/mapbox/light-v10") }}>Light</Menu.Item>
-            <Menu.Item key="light" onClick={() => { publish('mapstyle', 'mapbox://styles/ni1o1/ckj9bhq7s9mvj19mq3e3fye35') }}>Light(中文)</Menu.Item>
+            <Menu.Item key="lightcn" onClick={() => { publish('mapstyle', 'mapbox://styles/ni1o1/ckj9bhq7s9mvj19mq3e3fye35') }}>Light(中文)</Menu.Item>
             <Menu.Item key="satellite" onClick={() => { publish('mapstyle', "mapbox://styles/mapbox/satellite-v9") }}>Satellite</Menu.Item>
             <Menu.Item key="streets" onClick={() => { publish('mapstyle', "mapbox://styles/mapbox/streets-v10") }}>Streets</Menu.Item>
             <Menu.Item key="outdoors" onClick={() => { publish('mapstyle', "mapbox://styles/mapbox/outdoors-v10") }}>Outdoors</Menu.Item>

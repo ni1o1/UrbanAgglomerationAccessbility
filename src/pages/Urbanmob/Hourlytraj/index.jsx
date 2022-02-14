@@ -19,14 +19,13 @@ export default function Hourlytraj() {
     const publish = usePublish();
 
 
-    const [vmin, setvmin] = useState(180)
-    const [vmax, setvmax] = useState(300)
+    const [lineinfo, setlineinfo] = useState([])
 
     //边
     const [edge_renumbered, setedge_renumbered] = useState([])
     const [node_renumbered, setnode_renumbered] = useState([])
 
-    //边
+    //自定义边
     const [edge_new, setedge_new] = useState([])
     const [node_new, setnode_new] = useState([])
 
@@ -78,6 +77,10 @@ export default function Hourlytraj() {
     unsubscribe('stationCollection')
     useSubscribe('stationCollection', function (msg: any, data: any) {
         setstationCollection(data)
+        let stationcount = {}
+        data.features.map(v => stationcount[v.properties.index] = stationcount[v.properties.index] == undefined ? 1 : stationcount[v.properties.index] + 1)
+        Object.keys(stationcount).forEach(key => lineinfo[key].stations = stationcount[key])
+        setlineinfo(lineinfo)
         if (data.features.length > 0) {
             //处理节点
             setnode_new(data.features.map(f => '自定义' + f.properties.stationid))
@@ -127,7 +130,8 @@ export default function Hourlytraj() {
     unsubscribe('linkCollection')
     useSubscribe('linkCollection', function (msg: any, data: any) {
         setlinkCollection(data)
-
+        setlineinfo(data.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
+        //setlineinfo(data.features)
     });
     const [showdiff, setshowdiff] = useState(false)
     const ondiffChange = (v) => {
@@ -166,7 +170,11 @@ export default function Hourlytraj() {
                                     <Button type='primary' onClick={() => {
                                         publish('startedit', true)
                                     }}>添加线路</Button>
+                                    {`   共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`}
                                 </Col>
+                            </Row>
+                            <br />
+                            <Row gutters={4}>
                                 <Col>
                                     <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
                                     <Button onClick={() => { publish('deletefeature_station', true) }}>清空站点</Button>
@@ -191,10 +199,14 @@ export default function Hourlytraj() {
                                 </Col>
 
                             </Row>
-                            <Descriptions title="">
-                                <Descriptions.Item label="线路数" span={2}>{linkCollection.features.length}条</Descriptions.Item>
-                                <Descriptions.Item label="线路总长" span={2}>{length(linkCollection).toFixed(2)}km</Descriptions.Item>
-                            </Descriptions>
+
+                            {lineinfo.map(f =>
+                                <Descriptions title={`线路ID:${f.lineid}`}>
+                                    <Descriptions.Item label="站点数" span={1}>{f.stations == undefined ? 0 : f.stations}</Descriptions.Item>
+                                    <Descriptions.Item label="线路长度" span={1}>{f.length.toFixed(2)}km</Descriptions.Item>
+                                    <Descriptions.Item label="线路车速" span={1}>{travelspeed}km/h</Descriptions.Item>
+                                </Descriptions>)}
+
                         </Panel>
                         <Panel header="可达性计算" key="panel3">
                             <Descriptions title="交通拓扑网络信息">
