@@ -178,6 +178,8 @@ export default function Hourlytraj() {
                                 <Col>
                                     <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
                                     <Button onClick={() => { publish('deletefeature_station', true) }}>清空站点</Button>
+                                    <Button  onClick={() => { publish('download_line',true)}}>导出线路</Button>
+                                    <Button  onClick={() => { publish('download_station',true)}}>导出站点</Button>
                                 </Col>
                             </Row>
                             <br />
@@ -221,6 +223,9 @@ export default function Hourlytraj() {
                             <Row>
                                 <Col span={12}>
                                     <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
+                                    <Button  onClick={() => { 
+                                     publish('download_access_res',true)
+                                    }}>导出可达性</Button>
                                 </Col>
                                 <Col span={12}>
                                     显示平均出行时间差异:<Switch onChange={ondiffChange} />

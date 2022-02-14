@@ -148,16 +148,41 @@ export default function Deckmap() {
   unsubscribe('showdiff')
   useSubscribe('showdiff', function (msg: any, data: any) {
     setshowdiff(data)
-    if (data){
-    regeneraterank(rank, diff, 0, 60)
-  }else{
-    regeneraterank(rank, access_res, 180, 300)
+    if (data) {
+      regeneraterank(rank, diff, 0, 60)
+    } else {
+      regeneraterank(rank, access_res, 180, 300)
+    }
+  })
+  //导出
+  const downloadFile = async (myData, fileName) => {
+    const json = JSON.stringify(myData);
+    const blob = new Blob([json], { type: 'application/json' });
+    const href = await URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = fileName + ".json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
+  unsubscribe('download_access_res')
+  useSubscribe('download_access_res', function (msg: any, data: any) {
+    downloadFile(access_res, "access_res")
+  })
+  unsubscribe('download_line')
+  useSubscribe('download_line', function (msg: any, data: any) {
+    downloadFile(linkCollection, "line")
+  })
+  unsubscribe('download_station')
+  useSubscribe('download_station', function (msg: any, data: any) {
+    downloadFile(stationCollection, "station")
   })
   //订阅可达性
   unsubscribe('kedaxing')
   useSubscribe('kedaxing', function (msg: any, data: any) {
     setaccess_res(data)
+
     //计算差异
     const diff = {}
     Object.keys(data).forEach(key => {
@@ -382,7 +407,7 @@ export default function Deckmap() {
     } else if (info.layer.id == 'community') {
       if (info.index != -1) {
         const { groupname, index, access } = info.object.properties
-        return { text: showdiff?`社区名称:${groupname}\n社区编号:${index}\n平均出行时间减少:${access}分钟`:`社区名称:${groupname}\n社区编号:${index}\n平均出行时间:${access}分钟`, "style": { "color": "white" } }
+        return { text: showdiff ? `社区名称:${groupname}\n社区编号:${index}\n平均出行时间减少:${access}分钟` : `社区名称:${groupname}\n社区编号:${index}\n平均出行时间:${access}分钟`, "style": { "color": "white" } }
       }
       return null;
     } else if (info.layer.id == 'railstation') {
@@ -474,8 +499,8 @@ export default function Deckmap() {
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 0],
-    }): null,
-    rail_isshow ?new EditableGeoJsonLayer({//Draw车站图层
+    }) : null,
+    rail_isshow ? new EditableGeoJsonLayer({//Draw车站图层
       id: 'addedstation',
       data: stationCollection,
       mode: DrawPointMode,
@@ -485,15 +510,15 @@ export default function Deckmap() {
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 0],
-    }): null,
-    rail_isshow ?new GeoJsonLayer({//Draw车站图层（离线路最近点）
+    }) : null,
+    rail_isshow ? new GeoJsonLayer({//Draw车站图层（离线路最近点）
       id: 'railstation_nearest',
       data: railstation_nearest,
       getFillColor: [0, 0, 247],
       getLineColor: [0, 0, 247],
       getPointRadius: 600,
       opacity: 0.3,
-    }): null
+    }) : null
   ];
   //#endregion
   /*
