@@ -214,18 +214,14 @@ export default function Hourlytraj() {
                             </Row>
                         </Panel>
                         <Panel header="自定义交通网络" key="panel2">
-                            <Descriptions title="交通网络信息">
-                                <Descriptions.Item label="线路数" span={2}>{linkCollection.features.length}条</Descriptions.Item>
-                                <Descriptions.Item label="线路总长" span={2}>{length(linkCollection).toFixed(2)}km</Descriptions.Item>
-                            </Descriptions>
-                            <Row>
-                                <Button onClick={() => { publish('startedit', true) }}>添加线路</Button>
-                                <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
-                            </Row>
-                            <br />
-                            <Row>
+
+                            <Row gutters={4}>
                                 <Col>
-                                    添加站点:<Switch checkedChildren="开启" unCheckedChildren="关闭" onChange={(v) => { publish('startedit_station', v ? 2 : 1) }}></Switch>
+                                    <Button type='primary' onClick={() => { 
+                                        publish('startedit', true) }}>添加线路</Button>
+                                </Col>
+                                <Col>
+                                    <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
                                     <Button onClick={() => { publish('deletefeature_station', true) }}>清空站点</Button>
                                 </Col>
                             </Row>
@@ -248,6 +244,10 @@ export default function Hourlytraj() {
                                 </Col>
 
                             </Row>
+                            <Descriptions title="">
+                                <Descriptions.Item label="线路数" span={2}>{linkCollection.features.length}条</Descriptions.Item>
+                                <Descriptions.Item label="线路总长" span={2}>{length(linkCollection).toFixed(2)}km</Descriptions.Item>
+                            </Descriptions>
                         </Panel>
                         <Panel header="可达性计算" key="panel3">
                             <Descriptions title="交通拓扑网络信息">

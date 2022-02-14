@@ -1,5 +1,6 @@
 /* global window */
 import React, { useState, useEffect, useCallback } from 'react';
+import { message } from 'antd';
 import { _MapContext as MapContext, StaticMap, NavigationControl, ScaleControl, FlyToInterpolator } from 'react-map-gl';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { _SunLight as SunLight } from '@deck.gl/core';
@@ -260,6 +261,7 @@ export default function Deckmap() {
     const editType = e.editType
     if ((editType == 'addFeature')) {
       //为线路添加id
+      message.info('线路创建成功！创建线路后需要点击线路以添加站点，创建2个以上站点才能生效')
       const lineid = linkCollection.features.length + 1
       updatedData.features[updatedData.features.length - 1].properties['lineid'] = lineid
       setdrawmode(1)
@@ -447,7 +449,7 @@ export default function Deckmap() {
     new EditableGeoJsonLayer({//Draw车站图层
       id: 'addedstation',
       data: stationCollection,
-      mode: drawmode_station == 1 ? ViewMode : DrawPointMode,
+      mode: DrawPointMode,
       onEdit: handleonstationedit,
       getLineColor: [0, 0, 247],
       getLineWidth: 20,
