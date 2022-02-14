@@ -7,78 +7,10 @@ import {
 
 import { useSubscribe, usePublish, useUnsubscribe } from '@/utils/usePubSub';
 import { length } from '@turf/turf'
+import useWebWorker from "react-webworker-hook";
 
 const { Panel } = Collapse;
 
-
-/*
---------------Floyd-Warshall 算法----------------
-*/
-
-//Floyd算法
-//使用邻接矩阵构建图，输入顶点数量
-function Graph(v) {
-    this.vertices = v;//顶点数
-    this.edges = 0;//边数
-    this.adj = [];
-    //通过 for 循环为矩阵的每一个元素赋值0。
-    for (let i = 0; i < this.vertices; i++) {
-        this.adj[i] = [];
-        for (let j = 0; j < this.vertices; j++)
-            this.adj[i][j] = Infinity;
-    }
-    //添加一个数组用于存储路径长度
-    this.dist = [];
-    this.addEdge = addEdge;
-    this.floyd = floyd;
-    this.showFloyf = showFloyf;
-}
-
-//添加边
-function addEdge(v, w, k) {
-    this.adj[v][w] = k;
-    this.edges++;
-}
-
-function floyd() {
-    for (let i = 0; i < this.vertices; i++) {
-        this.dist[i] = [];
-        for (let j = 0; j < this.vertices; j++) {
-            if (i === j) {
-                this.dist[i][j] = 0;
-            } else if (!isFinite(this.adj[i][j])) {
-                this.dist[i][j] = 10000;
-            } else {
-                this.dist[i][j] = this.adj[i][j];
-            }
-        }
-    }
-    for (let k = 0; k < this.vertices; k++) {
-        for (let i = 0; i < this.vertices; i++) {
-            for (let j = 0; j < this.vertices; j++) {
-                if ((this.dist[i][k] + this.dist[k][j]) < this.dist[i][j]) {
-                    this.dist[i][j] = this.dist[i][k] + this.dist[k][j];
-                }
-            }
-        }
-    }
-}
-
-function showFloyf(nodename) {
-    let access_res = {}
-    for (let i = 0; i < this.vertices; i++) {
-        let res = []
-        for (let j = 0; j < this.vertices; j++) {
-            let value = this.dist[i][j] >= 10000 ? this.dist[j][i] : this.dist[i][j]
-            if (value < 10000) {
-                res.push(value)
-            }
-        }
-
-        access_res[nodename[i]] = parseInt(res.reduce((a, b) => { return a + b }, 0) / (res.length))
-    }
-    return access_res
-}
 
 
 
@@ -104,16 +36,27 @@ export default function Hourlytraj() {
     const [node_new, setnode_new] = useState([])
 
     //计算可达性
+    const [data=0 , postData] = useWebWorker({
+        url: "./js/floyd.worker.js"
+      });
+
     const calculateaccessbility = () => {
         const edge_all = edge_renumbered.concat(edge_new)
         const node_all = node_renumbered.concat(node_new)
-        const graphA = new Graph(node_all.length);
-        edge_all.map((f) => { graphA.addEdge(f[0], f[1], f[2]); graphA.addEdge(f[1], f[0], f[2]) })
-        graphA.floyd();
-        const newaccess_res = graphA.showFloyf(node_all);
-        publish('access_res', newaccess_res);
+        //发布计算指令
+        postData([edge_all,node_all])
+        message.loading({content:'可达性计算中',key:'cal'})
+        //publish('access_res', newaccess_res);
+        //message.success('计算成功，可达性已更新！')
+    }
+    useEffect(() => { 
+        if (data!=0){
+            publish('kedaxing', data)
+        
+        message.destroy('cal')
         message.success('计算成功，可达性已更新！')
     }
+    },[data])
 
     //获取网络并加载
     useState(() => {
@@ -140,48 +83,51 @@ export default function Hourlytraj() {
     unsubscribe('stationCollection')
     useSubscribe('stationCollection', function (msg: any, data: any) {
         setstationCollection(data)
-        //处理节点
-        setnode_new(data.features.map(f => '自定义' + f.properties.stationid))
-        //处理边
-        const newedge = []
-        //添加点与社区的边
-        data.features.map(f => {
-            if (f.properties.groupname != null) {
-                //此点的id
-                const newpointid = node_renumbered.length - 1 + f.properties.stationid
-                //社区的id
-                const communityid = node_renumbered.indexOf(f.properties.groupname)
-                //添加双向边
-                newedge.push([newpointid, communityid, 0])
-                newedge.push([communityid, newpointid, 0])
+        if (data.features.length > 0) {
+            //处理节点
+            setnode_new(data.features.map(f => '自定义' + f.properties.stationid))
+            //处理边
+            const newedge = []
+            //添加点与社区的边
+            data.features.map(f => {
+                if (f.properties.groupname != null) {
+                    //此点的id
+                    const newpointid = node_renumbered.length - 1 + f.properties.stationid
+                    //社区的id
+                    const communityid = node_renumbered.indexOf(f.properties.groupname)
+                    //添加双向边
+                    newedge.push([newpointid, communityid, 0])
+                    newedge.push([communityid, newpointid, 0])
+                }
             }
-        }
-        )
-        //添加点与点之间的边
-        //获取线路数
-        const numberlines = linkCollection.features.length
-        for (let i = 0; i < numberlines; i++) {
-            let thislinestation = data.features.filter((a) => a.properties.index == i)
-            thislinestation = thislinestation.sort(function (a, b) {
-                return a.properties.location - b.properties.location
-            })
-            for (let j = 0; j < thislinestation.length - 1; j++) {
-                //此点的id
-                const newpointid1 = node_renumbered.length - 1 + thislinestation[j].properties.stationid
-                //下一点的id
-                const newpointid2 = node_renumbered.length - 1 + thislinestation[j + 1].properties.stationid
-                //距离
-                const distance = Math.abs(thislinestation[j + 1].properties.location - thislinestation[j].properties.location)
-                //出行时长
-                const traveltime = 60 * distance / travelspeed
-                //添加双向边
-                newedge.push([newpointid1, newpointid2, traveltime])
-                newedge.push([newpointid2, newpointid1, traveltime])
+            )
+            //添加点与点之间的边
+            //获取线路数
+            const numberlines = linkCollection.features.length
+            for (let i = 0; i < numberlines; i++) {
+                let thislinestation = data.features.filter((a) => a.properties.index == i)
+                thislinestation = thislinestation.sort(function (a, b) {
+                    return a.properties.location - b.properties.location
+                })
+                for (let j = 0; j < thislinestation.length - 1; j++) {
+                    //此点的id
+                    const newpointid1 = node_renumbered.length - 1 + thislinestation[j].properties.stationid
+                    //下一点的id
+                    const newpointid2 = node_renumbered.length - 1 + thislinestation[j + 1].properties.stationid
+                    //距离
+                    const distance = Math.abs(thislinestation[j + 1].properties.location - thislinestation[j].properties.location)
+                    //出行时长
+                    const traveltime = 60 * distance / travelspeed
+                    //添加双向边
+                    newedge.push([newpointid1, newpointid2, traveltime])
+                    newedge.push([newpointid2, newpointid1, traveltime])
+                }
             }
+            setedge_new(newedge)
+        } else {
+            setnode_new([])
+            setedge_new([])
         }
-
-
-        setedge_new(newedge)
     });
     unsubscribe('linkCollection')
     useSubscribe('linkCollection', function (msg: any, data: any) {
@@ -217,8 +163,9 @@ export default function Hourlytraj() {
 
                             <Row gutters={4}>
                                 <Col>
-                                    <Button type='primary' onClick={() => { 
-                                        publish('startedit', true) }}>添加线路</Button>
+                                    <Button type='primary' onClick={() => {
+                                        publish('startedit', true)
+                                    }}>添加线路</Button>
                                 </Col>
                                 <Col>
                                     <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>

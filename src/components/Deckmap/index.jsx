@@ -142,12 +142,13 @@ export default function Deckmap() {
   const [railstation, setrailstation] = useState([])
   const [access_res, setaccess_res] = useState({})
 
-
   //订阅可达性
-  unsubscribe('access_res')
-  useSubscribe('access_res', function (msg: any, data: any) {
+  unsubscribe('kedaxing')
+  useSubscribe('kedaxing', function (msg: any, data: any) {
+    console.log('可达性计算成功')
     regeneraterank(rank, data)
   });
+
   //由可达性获得社区
   const regeneraterank = (rank, access_res) => {
     setaccess_res(access_res)
@@ -247,6 +248,9 @@ export default function Deckmap() {
   useSubscribe('deletefeature', function (msg: any, data: any) {
     deletefeature()
   });
+
+
+
   //开始编辑要素时，清空要素并设定为绘制模式
   function startedit() {
     setdrawmode(2)
@@ -312,7 +316,7 @@ export default function Deckmap() {
     if ((editType == 'addFeature')) {
       const pointpos1 = updatedData.features[updatedData.features.length - 1]
       const snapped = nearestPointOnLine(linkCollection, pointpos1)
-      if (snapped.properties.dist < 1) {
+      if (snapped.properties.dist < 2) {
         //计算点处于哪条线上
         const s = linkCollection.features.map(l=> nearestPointOnLine(l, snapped).properties.dist)
         const index = s.indexOf(Math.min.apply(Math, s))
@@ -330,7 +334,7 @@ export default function Deckmap() {
     } else {
       //判断是否在线附近，如果是，则显示线上最近点
       const snapped = nearestPointOnLine(linkCollection, pointpos)
-      if (snapped.properties.dist < 1) {
+      if (snapped.properties.dist < 2) {
         setrailstation_nearest(snapped)
       }
     }
