@@ -75,12 +75,13 @@ export default function Hourlytraj() {
         features: []
     });
 
-    const transfernode = (data) => { 
-        console.log(data)
+    const transfernode = (data) => {
         setstationCollection(data)
         let stationcount = {}
         data.features.map(v => stationcount[v.properties.index] = stationcount[v.properties.index] == undefined ? 1 : stationcount[v.properties.index] + 1)
-        Object.keys(stationcount).forEach(key => lineinfo[key].stations = stationcount[key])
+        
+        Object.keys(stationcount).forEach(key => lineinfo[key-1].stations = stationcount[key])
+        console.log(lineinfo,stationcount)
         setlineinfo(lineinfo)
         if (data.features.length > 0) {
             //处理节点
@@ -128,11 +129,13 @@ export default function Hourlytraj() {
             setedge_new([])
         }
     }
+    //地图编辑时发布的站点信息
     unsubscribe('stationCollection')
     useSubscribe('stationCollection', function (msg: any, data: any) {
         transfernode(data)
 
     });
+    //地图编辑时发布的线路信息
     unsubscribe('linkCollection')
     useSubscribe('linkCollection', function (msg: any, data: any) {
         setlinkCollection(data)
@@ -143,28 +146,38 @@ export default function Hourlytraj() {
         setshowdiff(v)
         publish('showdiff', v)
     }
-
+    const [importline,setimportline] = useState(true)
+    const [importstation,setimportstation] = useState(false)
+    //上传的线路信息
     const handleupload_line = (file) => {
         return new Promise(resolve => {
             const reader = new FileReader();
             reader.readAsText(file)
             reader.onload = function (f) {
                 const data = JSON.parse(f.target.result)
-                publish('uploadlinedata', data)
-                setlinkCollection(data)
-                setlineinfo(data.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
+                //已有的线路数量
+                linkCollection.features = linkCollection.features.concat(data.features.map((f) => { f.properties.lineid = f.properties.lineid + lineinfo.length; return f }))
+                setlinkCollection(linkCollection)
+                publish('uploadlinedata', linkCollection)
+                setlineinfo(linkCollection.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
+                setimportline(false)
+                setimportstation(true)
             }
         })
     }
-
+    //上传的站点信息
     const handleupload_station = (file) => {
         return new Promise(resolve => {
             const reader = new FileReader();
             reader.readAsText(file)
             reader.onload = function (f) {
+                console.log(lineinfo)
                 const data = JSON.parse(f.target.result)
-                publish('uploadstationdata', data)
-                transfernode(data)
+                stationCollection.features = stationCollection.features.concat(data.features.map((f) => { f.properties.index = f.properties.index + lineinfo.length; return f }))
+                publish('uploadstationdata', stationCollection)
+                transfernode(stationCollection)
+                setimportline(true)
+                setimportstation(false)
             }
         })
     }
@@ -208,14 +221,14 @@ export default function Hourlytraj() {
                                     }}>添加线路</Button>
                                     <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
                                     <Button onClick={() => { publish('deletefeature_station', true) }}>清空站点</Button>
-                                    </Col>
+                                </Col>
                             </Row>
                             <Row gutters={4}>
                                 <Col>
                                     <Button onClick={() => { publish('download_line', true) }} disabled={lineinfo.length === 0}>导出线路</Button>
                                     <Button onClick={() => { publish('download_station', true) }} disabled={node_new.length === 0}>导出站点</Button>
-                                    <Upload showUploadList={false} beforeUpload={handleupload_line}><Button>导入线路</Button></Upload>
-                                    <Upload showUploadList={false} beforeUpload={handleupload_station}><Button disabled={lineinfo.length === 0}>导入站点</Button></Upload>
+                                    <Upload showUploadList={false} beforeUpload={handleupload_line}><Button disabled={!importline}>导入线路</Button></Upload>
+                                    <Upload showUploadList={false} beforeUpload={handleupload_station}><Button disabled={!importstation}>导入站点</Button></Upload>
                                 </Col>
                             </Row>
                             <br />

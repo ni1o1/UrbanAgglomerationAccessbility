@@ -274,10 +274,18 @@ export default function Deckmap() {
   unsubscribe('uploadlinedata')
   useSubscribe('uploadlinedata', function (msg: any, data: any) {
     setlinkCollection(data)
+    setrail_isshow(false)
+    setTimeout(() => { 
+      setrail_isshow(true)
+    },10)
   })
   unsubscribe('uploadstationdata')
   useSubscribe('uploadstationdata', function (msg: any, data: any) {
     setstationCollection(data)
+    setrail_isshow(false)
+    setTimeout(() => { 
+      setrail_isshow(true)
+    },10)
   })
   //#endregion
   /*
