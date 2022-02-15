@@ -487,7 +487,7 @@ export default function Deckmap() {
       getLineWidth: 200,
       opacity: 0.5,
       getFillColor: f => f.properties.color,
-      getElevation: f => (500 / f.properties.access) ** 10,
+      getElevation: f => ( 1-f.properties.access/1000) **20*1000000,
       extruded: isextrude,
       pickable: true,
       autoHighlight: true,

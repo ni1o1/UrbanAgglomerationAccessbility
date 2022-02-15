@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Col, Card, Collapse, Slider,Table, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
+import { Col, Card, Collapse, Slider, Table, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
 import axios from 'axios';
 import {
     InfoCircleOutlined
@@ -78,7 +78,7 @@ export default function Hourlytraj() {
     const transfernode = (data, lineinfo) => {
         setstationCollection(data)
         //重新编号站点
-        data.features.map((v,index) =>{data.features[index].properties.stationid=index+1} )
+        data.features.map((v, index) => { data.features[index].properties.stationid = index + 1 })
         let stationcount = {}
         data.features.map(v => stationcount[v.properties.index] = stationcount[v.properties.index] == undefined ? 1 : stationcount[v.properties.index] + 1)
 
@@ -120,7 +120,7 @@ export default function Hourlytraj() {
                     const distance = Math.abs(thislinestation[j + 1].properties.location - thislinestation[j].properties.location)
                     //出行时长
                     const traveltime = 60 * distance / lineinfo[i].speed
-                    
+
                     //添加双向边
                     newedge.push([newpointid1, newpointid2, traveltime])
                     newedge.push([newpointid2, newpointid1, traveltime])
@@ -209,28 +209,11 @@ export default function Hourlytraj() {
     return (
         <>
             <Col span={24}>
-                <Card title="社区可达性"
+                <Card title="城市群交通可达性"
                     bordered={false}>
                     <Collapse defaultActiveKey={['panel1', 'panel2', 'panel3']}>
 
-                        <Panel header="社区可达性"
-                            extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} key="panel1">
-                            <Row>
-                                {showdiff ? '【铁路+出租车】平均出行时间减少（分钟）' : '【铁路+出租车】平均出行时间（分钟）'}
-                            </Row>
-                            <br />
-                            <Row>
-                                <Col span={3} style={{ textAlign: 'center' }}>
-                                    {showdiff ? 0 : 180}
-                                </Col>
-                                <Col span={18}>
-                                    <div style={{ height: '20px', width: '100%', backgroundImage: "linear-gradient(to right,#9DCC42, #FFFE03, #F7941D, #E9420E, #FF0000)" }}></div>
-                                </Col>
-                                <Col span={3} style={{ textAlign: 'center' }}>
-                                    {showdiff ? 60 : 300}
-                                </Col>
-                            </Row>
-                        </Panel>
+
                         <Panel header="自定义交通网络" key="panel2">
 
                             <Row gutters={4}>
@@ -260,11 +243,14 @@ export default function Hourlytraj() {
                                 </Col>
                             </Row>
                             <br />
-                            {linkCollection.features.length>=1?<Table size='small' footer={() => { 
-                             return `共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`
-                            }} dataSource={lineinfo.map(f =>{return {lineid: f.lineid,stations:f.stations == undefined ? 0 : f.stations,length:f.length.toFixed(2),
-                            speed:<InputNumber style={{ width: '100px' }} size="small" defaultValue={f.speed} onChange={onlinespeedChange(f.lineid)} step={10} />
-                        }})} columns={[
+                            {linkCollection.features.length >= 1 ? <Table size='small' footer={() => {
+                                return `共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`
+                            }} dataSource={lineinfo.map(f => {
+                                return {
+                                    lineid: f.lineid, stations: f.stations == undefined ? 0 : f.stations, length: f.length.toFixed(2),
+                                    speed: <InputNumber style={{ width: '100px' }} min={1} size="small" defaultValue={f.speed} onChange={onlinespeedChange(f.lineid)} step={10} />
+                                }
+                            })} columns={[
                                 {
                                     title: '线路ID',
                                     dataIndex: 'lineid',
@@ -279,23 +265,43 @@ export default function Hourlytraj() {
                                     title: '线路长度(km)',
                                     dataIndex: 'length',
                                     key: 'length',
-                                },{
+                                }, {
                                     title: '运营速度(km/h)',
                                     dataIndex: 'speed',
                                     key: 'speed',
                                 },
-                            ]} />:<></>}
+                            ]} /> : <></>}
+
+
                         </Panel>
-                        <Panel header="可达性计算" key="panel3">
-                            <Descriptions title="交通拓扑网络信息">
+                        <Panel header="可达性计算" key="panel3"
+                            extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} >
+                            <Descriptions size="small" bordered title="交通拓扑网络信息">
                                 <Descriptions.Item label="内置节点数量" span={2}>{node_renumbered.length}</Descriptions.Item>
                                 <Descriptions.Item label="内置边数量" span={2}> {edge_renumbered.length}</Descriptions.Item>
                                 <Descriptions.Item label="自定义节点数量" span={2}>{node_new.length}</Descriptions.Item>
                                 <Descriptions.Item label="自定义边数量" span={2}> {edge_new.length}</Descriptions.Item>
                             </Descriptions>
+                            <br />
+                            <Row>
+                                {showdiff ? '【铁路+出租车】平均出行时间减少（分钟）' : '【铁路+出租车】平均出行时间（分钟）'}
+                            </Row>
+                            <br />
+                            <Row>
+                                <Col span={3} style={{ textAlign: 'center' }}>
+                                    {showdiff ? 0 : 180}
+                                </Col>
+                                <Col span={18}>
+                                    <div style={{ height: '20px', width: '100%', backgroundImage: "linear-gradient(to right,#9DCC42, #FFFE03, #F7941D, #E9420E, #FF0000)" }}></div>
+                                </Col>
+                                <Col span={3} style={{ textAlign: 'center' }}>
+                                    {showdiff ? 60 : 300}
+                                </Col>
+                            </Row>
 
 
 
+                            <br />
                             <Row>
                                 <Col span={12}>
                                     <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
