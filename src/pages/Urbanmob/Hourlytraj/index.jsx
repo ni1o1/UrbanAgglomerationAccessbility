@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Col, Card, Collapse, Select, Table, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
+import { Col, Card, Collapse, Select, Menu, Dropdown, Table, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
 import axios from 'axios';
 import {
-    InfoCircleOutlined
+    InfoCircleOutlined, DownOutlined
 } from '@ant-design/icons';
 
 import { useSubscribe, usePublish, useUnsubscribe } from '@/utils/usePubSub';
@@ -39,7 +39,7 @@ export default function Hourlytraj() {
         const node_all = node_renumbered.concat(node_new)
         //发布计算指令
         postData([edge_all, node_all])
-        message.loading({ content: '可达性计算中', key: 'cal' ,duration:0})
+        message.loading({ content: '可达性计算中', key: 'cal', duration: 0 })
         //publish('access_res', newaccess_res);
         //message.success('计算成功，可达性已更新！')
     }
@@ -55,10 +55,10 @@ export default function Hourlytraj() {
     //获取网络并加载
     useState(() => {
         //加载边
-        axios.get('data/edge_renumbered.json').then(response => {
+        axios.get('data/edge_renumbered_rank2.json').then(response => {
             setedge_renumbered(response.data)
         }).then(() => {
-            axios.get('data/node_renumbered.json').then(response => {
+            axios.get('data/node_renumbered_rank2.json').then(response => {
                 setnode_renumbered(response.data)
             })
         })
@@ -209,43 +209,80 @@ export default function Hourlytraj() {
 
     const [vmin, setvmin] = useState(180)
     const [vmax, setvmax] = useState(300)
-    const handlerankChange = (data) => {
-        if(data=='rank1'){
+    const handlerankChange = ({ key }) => {
+        const data = key
+        if (data == 'rank1') {
             setvmin(300)
             setvmax(500)
-          }else if(data=='rank2'){
+        } else if (data == 'rank2') {
             setvmin(180)
             setvmax(300)
-          }else if(data=='rank3'){
+        } else if (data == 'rank3') {
             setvmin(120)
             setvmax(300)
-          }
+        }
         axios.get(`data/edge_renumbered_${data}.json`).then(response => {
             setedge_renumbered(response.data)
         }).then(() => {
             axios.get(`data/node_renumbered_${data}.json`).then(response => {
                 setnode_renumbered(response.data)
             })
-            
+
         })
         publish('rank', data)
     }
     return (
         <>
             <Col span={24}>
-                <Card title="城市群交通可达性"
+                <Card title="城市群交通可达性" extra={                   <Dropdown overlay={<Menu onClick={handlerankChange}>
+                        <Menu.Item key="rank1">1层社区</Menu.Item>
+                        <Menu.Item key="rank2">2层社区</Menu.Item>
+                        <Menu.Item key="rank3">3层社区</Menu.Item>
+                    </Menu>}>
+                        <Button type='text' onClick={e => e.preventDefault()}>
+                            <DownOutlined />
+                        </Button>
+                    </Dropdown>}
                     bordered={false}>
-                                                    <Row>
-                                <Col>
-                                    社区层次
-                                    <Select defaultValue="2层社区" style={{ width: 120 }} onChange={handlerankChange}>
-                                        {/* <Option value="rank1">1层社区</Option> */}
-                                        <Option value="rank2">2层社区</Option>
-                                        <Option value="rank3">3层社区</Option>
-                                    </Select></Col>
+                    <Collapse defaultActiveKey={['panel1', 'panel2', 'panel3']}>
+                    <Panel header="可达性计算" key="panel3"
+                            extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} >
+
+                            <Descriptions size="small" bordered title="交通拓扑网络信息">
+                                <Descriptions.Item label="内置节点数量" span={2}>{node_renumbered.length}</Descriptions.Item>
+                                <Descriptions.Item label="内置边数量" span={2}> {edge_renumbered.length}</Descriptions.Item>
+                                <Descriptions.Item label="自定义节点数量" span={2}>{node_new.length}</Descriptions.Item>
+                                <Descriptions.Item label="自定义边数量" span={2}> {edge_new.length}</Descriptions.Item>
+                            </Descriptions>
+                            <br />
+                            <Row>
+                                {showdiff ? '【铁路+出租车】平均出行时间减少（分钟）' : '【铁路+出租车】平均出行时间（分钟）'}
                             </Row>
                             <br />
-                    <Collapse defaultActiveKey={['panel1', 'panel2', 'panel3']}>
+                            <Row>
+                                <Col span={3} style={{ textAlign: 'center' }}>
+                                    {showdiff ? 0 : vmin}
+                                </Col>
+                                <Col span={18}>
+                                    <div style={{ height: '20px', width: '100%', backgroundImage: "linear-gradient(to right,#9DCC42, #FFFE03, #F7941D, #E9420E, #FF0000)" }}></div>
+                                </Col>
+                                <Col span={3} style={{ textAlign: 'center' }}>
+                                    {showdiff ? 60 : vmax}
+                                </Col>
+                            </Row>
+                            <br />
+                            <Row>
+                                <Col span={12}>
+                                    <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
+                                    <Button onClick={() => {
+                                        publish('download_access_res', true)
+                                    }}>导出可达性</Button>
+                                </Col>
+                                <Col span={12}>
+                                    显示平均出行时间差异:<Switch onChange={ondiffChange} />
+                                </Col>
+                            </Row>
+                        </Panel>
                         <Panel header="自定义交通网络" key="panel2">
                             <Row gutters={4}>
                                 <Col>
@@ -303,44 +340,7 @@ export default function Hourlytraj() {
                                 },
                             ]} /> : <></>}
                         </Panel>
-                        <Panel header="可达性计算" key="panel3"
-                            extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} >
-
-                            <Descriptions size="small" bordered title="交通拓扑网络信息">
-                                <Descriptions.Item label="内置节点数量" span={2}>{node_renumbered.length}</Descriptions.Item>
-                                <Descriptions.Item label="内置边数量" span={2}> {edge_renumbered.length}</Descriptions.Item>
-                                <Descriptions.Item label="自定义节点数量" span={2}>{node_new.length}</Descriptions.Item>
-                                <Descriptions.Item label="自定义边数量" span={2}> {edge_new.length}</Descriptions.Item>
-                            </Descriptions>
-                            <br />
-                            <Row>
-                                {showdiff ? '【铁路+出租车】平均出行时间减少（分钟）' : '【铁路+出租车】平均出行时间（分钟）'}
-                            </Row>
-                            <br />
-                            <Row>
-                                <Col span={3} style={{ textAlign: 'center' }}>
-                                    {showdiff ? 0 : vmin}
-                                </Col>
-                                <Col span={18}>
-                                    <div style={{ height: '20px', width: '100%', backgroundImage: "linear-gradient(to right,#9DCC42, #FFFE03, #F7941D, #E9420E, #FF0000)" }}></div>
-                                </Col>
-                                <Col span={3} style={{ textAlign: 'center' }}>
-                                    {showdiff ? 60 : vmax}
-                                </Col>
-                            </Row>
-                            <br />
-                            <Row>
-                                <Col span={12}>
-                                    <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
-                                    <Button onClick={() => {
-                                        publish('download_access_res', true)
-                                    }}>导出可达性</Button>
-                                </Col>
-                                <Col span={12}>
-                                    显示平均出行时间差异:<Switch onChange={ondiffChange} />
-                                </Col>
-                            </Row>
-                        </Panel>
+                        
                     </Collapse>
                 </Card>
             </Col>
