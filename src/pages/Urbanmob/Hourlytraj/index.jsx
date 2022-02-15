@@ -142,8 +142,9 @@ export default function Hourlytraj() {
         setlineinfo(data.features.map((f, index) => {
             if (lineinfo[index] == undefined) {
                 return { lineid: f.properties.lineid, length: length(f), speed: travelspeed }
-            } else { 
-                return { lineid: f.properties.lineid, length: length(f), speed: lineinfo[index].speed } }
+            } else {
+                return { lineid: f.properties.lineid, length: length(f), speed: lineinfo[index].speed }
+            }
         }))
         setlinewithstation(data.features.length)
     });
@@ -223,12 +224,7 @@ export default function Hourlytraj() {
                             </Row>
                         </Panel>
                         <Panel header="自定义交通网络" key="panel2">
-                            <Row gutters={4}>
-                                <Col>
-                                    {`共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`}
-                                </Col>
-                            </Row>
-                            <br />
+
                             <Row gutters={4}>
                                 <Col>
                                     <Button type='primary' onClick={() => {
@@ -258,12 +254,26 @@ export default function Hourlytraj() {
                             <br />
 
                             {lineinfo.map(f =>
-                                <Descriptions title={`线路ID:${f.lineid}`}>
-                                    <Descriptions.Item label="站点数" span={1}>{f.stations == undefined ? 0 : f.stations}</Descriptions.Item>
-                                    <Descriptions.Item label="线路长度" span={1}>{f.length.toFixed(2)}km</Descriptions.Item>
-                                    <Descriptions.Item label="线路车速" span={1}><InputNumber size="small" defaultValue={f.speed} addonAfter='km/h' onChange={onlinespeedChange(f.lineid)} step={10} /></Descriptions.Item>
-                                </Descriptions>)}
-
+                                <Row>
+                                    <Col span={4}>
+                                        <h4>{`线路ID:${f.lineid}`}</h4>
+                                    </Col>
+                                    <Col span={4}>
+                                        站点数:{f.stations == undefined ? 0 : f.stations}
+                                    </Col>
+                                    <Col span={8}>
+                                        线路长度:{f.length.toFixed(2)}km
+                                    </Col>
+                                    <Col span={8}>
+                                        线路车速:<InputNumber style={{ width: '120px' }} size="small" defaultValue={f.speed} addonAfter='km/h' onChange={onlinespeedChange(f.lineid)} step={10} />
+                                    </Col>
+                                </Row>)}
+                            <Row gutters={4}>
+                                <Col>
+                                    {`共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`}
+                                </Col>
+                            </Row>
+                            
                         </Panel>
                         <Panel header="可达性计算" key="panel3">
                             <Descriptions title="交通拓扑网络信息">
