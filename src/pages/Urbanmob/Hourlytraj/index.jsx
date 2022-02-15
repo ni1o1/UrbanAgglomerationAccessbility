@@ -265,7 +265,7 @@ export default function Hourlytraj() {
                                         线路长度:{f.length.toFixed(2)}km
                                     </Col>
                                     <Col span={8}>
-                                        线路车速:<InputNumber style={{ width: '120px' }} size="small" defaultValue={f.speed} addonAfter='km/h' onChange={onlinespeedChange(f.lineid)} step={10} />
+                                        线路车速:<InputNumber style={{ width: '100px' }} size="small" defaultValue={f.speed} addonAfter='km/h' onChange={onlinespeedChange(f.lineid)} step={10} />
                                     </Col>
                                 </Row>)}
                             <Row gutters={4}>
