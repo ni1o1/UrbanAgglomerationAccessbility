@@ -77,6 +77,8 @@ export default function Hourlytraj() {
 
     const transfernode = (data, lineinfo) => {
         setstationCollection(data)
+        //重新编号站点
+        data.features.map((v,index) =>{data.features[index].properties.stationid=index+1} )
         let stationcount = {}
         data.features.map(v => stationcount[v.properties.index] = stationcount[v.properties.index] == undefined ? 1 : stationcount[v.properties.index] + 1)
 
@@ -118,7 +120,7 @@ export default function Hourlytraj() {
                     const distance = Math.abs(thislinestation[j + 1].properties.location - thislinestation[j].properties.location)
                     //出行时长
                     const traveltime = 60 * distance / lineinfo[i].speed
-                    console.log(lineinfo[i].speed)
+                    
                     //添加双向边
                     newedge.push([newpointid1, newpointid2, traveltime])
                     newedge.push([newpointid2, newpointid1, traveltime])
@@ -166,7 +168,13 @@ export default function Hourlytraj() {
                 linkCollection.features = linkCollection.features.concat(data.features.map((f) => { f.properties.lineid = f.properties.lineid + lineinfo.length; return f }))
                 setlinkCollection(linkCollection)
                 publish('uploadlinedata', linkCollection)
-                setlineinfo(linkCollection.features.map(f => { return { lineid: f.properties.lineid, length: length(f), speed: travelspeed } }))
+                setlineinfo(linkCollection.features.map((f, index) => {
+                    if (lineinfo[index] == undefined) {
+                        return { lineid: f.properties.lineid, length: length(f), speed: travelspeed }
+                    } else {
+                        return { lineid: f.properties.lineid, length: length(f), speed: lineinfo[index].speed }
+                    }
+                }))
                 setimportline(false)
                 setimportstation(true)
             }
