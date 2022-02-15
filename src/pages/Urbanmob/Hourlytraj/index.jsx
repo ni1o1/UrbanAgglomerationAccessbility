@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Col, Card, Collapse, Slider, Tooltip, Row, Switch, Button, Descriptions, message } from 'antd';
+import { Col, Card, Collapse, Slider, Tooltip, Row, Switch, Button, Descriptions, message, Upload } from 'antd';
 import axios from 'axios';
 import {
     InfoCircleOutlined
@@ -74,8 +74,9 @@ export default function Hourlytraj() {
         type: 'FeatureCollection',
         features: []
     });
-    unsubscribe('stationCollection')
-    useSubscribe('stationCollection', function (msg: any, data: any) {
+
+    const transfernode = (data) => { 
+        console.log(data)
         setstationCollection(data)
         let stationcount = {}
         data.features.map(v => stationcount[v.properties.index] = stationcount[v.properties.index] == undefined ? 1 : stationcount[v.properties.index] + 1)
@@ -126,17 +127,46 @@ export default function Hourlytraj() {
             setnode_new([])
             setedge_new([])
         }
+    }
+    unsubscribe('stationCollection')
+    useSubscribe('stationCollection', function (msg: any, data: any) {
+        transfernode(data)
+
     });
     unsubscribe('linkCollection')
     useSubscribe('linkCollection', function (msg: any, data: any) {
         setlinkCollection(data)
         setlineinfo(data.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
-        //setlineinfo(data.features)
     });
     const [showdiff, setshowdiff] = useState(false)
     const ondiffChange = (v) => {
         setshowdiff(v)
         publish('showdiff', v)
+    }
+
+    const handleupload_line = (file) => {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.readAsText(file)
+            reader.onload = function (f) {
+                const data = JSON.parse(f.target.result)
+                publish('uploadlinedata', data)
+                setlinkCollection(data)
+                setlineinfo(data.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
+            }
+        })
+    }
+
+    const handleupload_station = (file) => {
+        return new Promise(resolve => {
+            const reader = new FileReader();
+            reader.readAsText(file)
+            reader.onload = function (f) {
+                const data = JSON.parse(f.target.result)
+                publish('uploadstationdata', data)
+                transfernode(data)
+            }
+        })
     }
     return (
         <>
@@ -164,22 +194,28 @@ export default function Hourlytraj() {
                             </Row>
                         </Panel>
                         <Panel header="自定义交通网络" key="panel2">
-
                             <Row gutters={4}>
                                 <Col>
-                                    <Button type='primary' onClick={() => {
-                                        publish('startedit', true)
-                                    }}>添加线路</Button>
-                                    {`   共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`}
+                                    {`共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`}
                                 </Col>
                             </Row>
                             <br />
                             <Row gutters={4}>
                                 <Col>
+                                    <Button type='primary' onClick={() => {
+                                        message.info('已打开编辑模式，请在地图上绘制以添加线路')
+                                        publish('startedit', true)
+                                    }}>添加线路</Button>
                                     <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
                                     <Button onClick={() => { publish('deletefeature_station', true) }}>清空站点</Button>
-                                    <Button  onClick={() => { publish('download_line',true)}}>导出线路</Button>
-                                    <Button  onClick={() => { publish('download_station',true)}}>导出站点</Button>
+                                    </Col>
+                            </Row>
+                            <Row gutters={4}>
+                                <Col>
+                                    <Button onClick={() => { publish('download_line', true) }} disabled={lineinfo.length === 0}>导出线路</Button>
+                                    <Button onClick={() => { publish('download_station', true) }} disabled={node_new.length === 0}>导出站点</Button>
+                                    <Upload showUploadList={false} beforeUpload={handleupload_line}><Button>导入线路</Button></Upload>
+                                    <Upload showUploadList={false} beforeUpload={handleupload_station}><Button disabled={lineinfo.length === 0}>导入站点</Button></Upload>
                                 </Col>
                             </Row>
                             <br />
@@ -223,8 +259,8 @@ export default function Hourlytraj() {
                             <Row>
                                 <Col span={12}>
                                     <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
-                                    <Button  onClick={() => { 
-                                     publish('download_access_res',true)
+                                    <Button onClick={() => {
+                                        publish('download_access_res', true)
                                     }}>导出可达性</Button>
                                 </Col>
                                 <Col span={12}>

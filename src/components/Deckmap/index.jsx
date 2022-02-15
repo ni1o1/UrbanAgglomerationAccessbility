@@ -154,30 +154,9 @@ export default function Deckmap() {
       regeneraterank(rank, access_res, 180, 300)
     }
   })
-  //导出
-  const downloadFile = async (myData, fileName) => {
-    const json = JSON.stringify(myData);
-    const blob = new Blob([json], { type: 'application/json' });
-    const href = await URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = href;
-    link.download = fileName + ".json";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-  unsubscribe('download_access_res')
-  useSubscribe('download_access_res', function (msg: any, data: any) {
-    downloadFile(access_res, "access_res")
-  })
-  unsubscribe('download_line')
-  useSubscribe('download_line', function (msg: any, data: any) {
-    downloadFile(linkCollection, "line")
-  })
-  unsubscribe('download_station')
-  useSubscribe('download_station', function (msg: any, data: any) {
-    downloadFile(stationCollection, "station")
-  })
+
+
+
   //订阅可达性
   unsubscribe('kedaxing')
   useSubscribe('kedaxing', function (msg: any, data: any) {
@@ -263,6 +242,43 @@ export default function Deckmap() {
       return COLOR_SCALE(WIDTH_SCALE(v)).match(/\d+/g).map(f => parseInt(f))
     } catch { return null }
   }
+  //#endregion
+  /*
+---------------导入导出线路站点数据---------------
+*/
+  //#region
+  //导出
+  const downloadFile = async (myData, fileName) => {
+    const json = JSON.stringify(myData);
+    const blob = new Blob([json], { type: 'application/json' });
+    const href = await URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = fileName + ".json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+  unsubscribe('download_access_res')
+  useSubscribe('download_access_res', function (msg: any, data: any) {
+    downloadFile(access_res, "access_res")
+  })
+  unsubscribe('download_line')
+  useSubscribe('download_line', function (msg: any, data: any) {
+    downloadFile(linkCollection, "line")
+  })
+  unsubscribe('download_station')
+  useSubscribe('download_station', function (msg: any, data: any) {
+    downloadFile(stationCollection, "station")
+  })
+  unsubscribe('uploadlinedata')
+  useSubscribe('uploadlinedata', function (msg: any, data: any) {
+    setlinkCollection(data)
+  })
+  unsubscribe('uploadstationdata')
+  useSubscribe('uploadstationdata', function (msg: any, data: any) {
+    setstationCollection(data)
+  })
   //#endregion
   /*
   ---------------绘制铁路图层的设置---------------
