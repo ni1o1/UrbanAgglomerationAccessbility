@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Col, Card, Collapse, Slider, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
+import { Col, Card, Collapse, Slider,Table, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
 import axios from 'axios';
 import {
     InfoCircleOutlined
@@ -252,28 +252,31 @@ export default function Hourlytraj() {
                                 </Col>
                             </Row>
                             <br />
-
-                            {lineinfo.map(f =>
-                                <Row>
-                                    <Col span={4}>
-                                        <h4>{`线路ID:${f.lineid}`}</h4>
-                                    </Col>
-                                    <Col span={4}>
-                                        站点数:{f.stations == undefined ? 0 : f.stations}
-                                    </Col>
-                                    <Col span={8}>
-                                        线路长度:{f.length.toFixed(2)}km
-                                    </Col>
-                                    <Col span={8}>
-                                        线路车速:<InputNumber style={{ width: '100px' }} size="small" defaultValue={f.speed} addonAfter='km/h' onChange={onlinespeedChange(f.lineid)} step={10} />
-                                    </Col>
-                                </Row>)}
-                            <Row gutters={4}>
-                                <Col>
-                                    {`共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`}
-                                </Col>
-                            </Row>
-                            
+                            {linkCollection.features.length>=1?<Table size='small' footer={() => { 
+                             return `共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`
+                            }} dataSource={lineinfo.map(f =>{return {lineid: f.lineid,stations:f.stations == undefined ? 0 : f.stations,length:f.length.toFixed(2),
+                            speed:<InputNumber style={{ width: '100px' }} size="small" defaultValue={f.speed} onChange={onlinespeedChange(f.lineid)} step={10} />
+                        }})} columns={[
+                                {
+                                    title: '线路ID',
+                                    dataIndex: 'lineid',
+                                    key: 'lineid',
+                                },
+                                {
+                                    title: '站点数',
+                                    dataIndex: 'stations',
+                                    key: 'stations',
+                                },
+                                {
+                                    title: '线路长度(km)',
+                                    dataIndex: 'length',
+                                    key: 'length',
+                                },{
+                                    title: '运营速度(km/h)',
+                                    dataIndex: 'speed',
+                                    key: 'speed',
+                                },
+                            ]} />:<></>}
                         </Panel>
                         <Panel header="可达性计算" key="panel3">
                             <Descriptions title="交通拓扑网络信息">
