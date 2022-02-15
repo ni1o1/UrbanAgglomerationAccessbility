@@ -151,7 +151,7 @@ export default function Deckmap() {
     if (data) {
       regeneraterank(rank, diff, 0, 60)
     } else {
-      regeneraterank(rank, access_res, 180, 300)
+      regeneraterank(rank, access_res, vmin, vmax)
     }
   })
 
@@ -169,7 +169,7 @@ export default function Deckmap() {
     })
     setdiff(diff)
     if (!showdiff) {
-      regeneraterank(rank, data, 180, 300)
+      regeneraterank(rank, data, vmin, vmax)
     } else {
       regeneraterank(rank, diff, 0, 60)
     }
@@ -208,9 +208,9 @@ export default function Deckmap() {
       //加载可达性
       return rank2_reshape
     }).then((rank2_reshape) => {
-      axios.get('data/access_res.json').then(response => {
+      axios.get('data/access_res_rank2.json').then(response => {
         setorigin_access_res(response.data)
-        regeneraterank(rank2_reshape, response.data, 180, 300)
+        regeneraterank(rank2_reshape, response.data,vmin, vmax)
       })
     })
     //加载铁路线
@@ -225,7 +225,40 @@ export default function Deckmap() {
     })
   }, [])
 
-
+  //如果切换层级
+  unsubscribe('rank')
+  useSubscribe('rank', function (msg: any, data: any) {
+    axios.get(`data/${data}_reshape_simplify.json`).then(response => {
+      const rank2_reshape = response.data
+      setrank(rank2_reshape)
+      //加载可达性
+      if(data=='rank1'){
+        setvmin(300)
+        setvmax(500)
+      }else if(data=='rank2'){
+        setvmin(180)
+        setvmax(300)
+      }else if(data=='rank3'){
+        setvmin(120)
+        setvmax(300)
+      }
+      return rank2_reshape
+    }).then((rank2_reshape) => {
+      setTimeout(() => { 
+        axios.get(`data/access_res_${data}.json`).then(response => {
+          setorigin_access_res(response.data)
+          if(data=='rank1'){
+            regeneraterank(rank2_reshape, response.data, 300, 500)
+          }else if(data=='rank2'){
+            regeneraterank(rank2_reshape, response.data, 180, 300)
+          }else if(data=='rank3'){
+            regeneraterank(rank2_reshape, response.data, 120, 300)
+          }
+          
+        })
+      },100)
+    })
+  })
   //colormap的设置
   //cmap
 
@@ -275,17 +308,17 @@ export default function Deckmap() {
   useSubscribe('uploadlinedata', function (msg: any, data: any) {
     setlinkCollection(data)
     setrail_isshow(false)
-    setTimeout(() => { 
+    setTimeout(() => {
       setrail_isshow(true)
-    },10)
+    }, 10)
   })
   unsubscribe('uploadstationdata')
   useSubscribe('uploadstationdata', function (msg: any, data: any) {
     setstationCollection(data)
     setrail_isshow(false)
-    setTimeout(() => { 
+    setTimeout(() => {
       setrail_isshow(true)
-    },10)
+    }, 10)
   })
   //#endregion
   /*
@@ -487,7 +520,7 @@ export default function Deckmap() {
       getLineWidth: 200,
       opacity: 0.5,
       getFillColor: f => f.properties.color,
-      getElevation: f => ( 1-f.properties.access/1000) **20*1000000,
+      getElevation: f => (1 - f.properties.access / 1000) ** 20 * 1000000,
       extruded: isextrude,
       pickable: true,
       autoHighlight: true,
