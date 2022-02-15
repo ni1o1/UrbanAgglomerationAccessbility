@@ -75,13 +75,13 @@ export default function Hourlytraj() {
         features: []
     });
 
-    const transfernode = (data) => {
+    const transfernode = (data,lineinfo) => {
         setstationCollection(data)
         let stationcount = {}
         data.features.map(v => stationcount[v.properties.index] = stationcount[v.properties.index] == undefined ? 1 : stationcount[v.properties.index] + 1)
+
+        Object.keys(stationcount).forEach(key => lineinfo[key].stations = stationcount[key])
         
-        Object.keys(stationcount).forEach(key => lineinfo[key-1].stations = stationcount[key])
-        console.log(lineinfo,stationcount)
         setlineinfo(lineinfo)
         if (data.features.length > 0) {
             //处理节点
@@ -132,22 +132,23 @@ export default function Hourlytraj() {
     //地图编辑时发布的站点信息
     unsubscribe('stationCollection')
     useSubscribe('stationCollection', function (msg: any, data: any) {
-        transfernode(data)
-
+        console.log(data)
+        transfernode(data,lineinfo)
     });
     //地图编辑时发布的线路信息
     unsubscribe('linkCollection')
     useSubscribe('linkCollection', function (msg: any, data: any) {
         setlinkCollection(data)
         setlineinfo(data.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
+        setlinewithstation(data.features.length)
     });
     const [showdiff, setshowdiff] = useState(false)
     const ondiffChange = (v) => {
         setshowdiff(v)
         publish('showdiff', v)
     }
-    const [importline,setimportline] = useState(true)
-    const [importstation,setimportstation] = useState(false)
+    const [importline, setimportline] = useState(true)
+    const [importstation, setimportstation] = useState(false)
     //上传的线路信息
     const handleupload_line = (file) => {
         return new Promise(resolve => {
@@ -165,17 +166,19 @@ export default function Hourlytraj() {
             }
         })
     }
+    const [linewithstation, setlinewithstation] = useState(0)
     //上传的站点信息
     const handleupload_station = (file) => {
         return new Promise(resolve => {
             const reader = new FileReader();
             reader.readAsText(file)
             reader.onload = function (f) {
-                console.log(lineinfo)
                 const data = JSON.parse(f.target.result)
-                stationCollection.features = stationCollection.features.concat(data.features.map((f) => { f.properties.index = f.properties.index + lineinfo.length; return f }))
+                //判断现在stationCollection有没有，有就加，没有就不加？
+                stationCollection.features = stationCollection.features.concat(data.features.map((f) => { f.properties.index = f.properties.index + linewithstation; return f }))
+                setlinewithstation(lineinfo.length)
                 publish('uploadstationdata', stationCollection)
-                transfernode(stationCollection)
+                transfernode(stationCollection,lineinfo)
                 setimportline(true)
                 setimportstation(false)
             }
@@ -219,14 +222,20 @@ export default function Hourlytraj() {
                                         message.info('已打开编辑模式，请在地图上绘制以添加线路')
                                         publish('startedit', true)
                                     }}>添加线路</Button>
-                                    <Button onClick={() => { publish('deletefeature', true) }}>清空线路</Button>
-                                    <Button onClick={() => { publish('deletefeature_station', true) }}>清空站点</Button>
+                                    <Button onClick={() => { publish('deletefeature', true)
+                                setlinewithstation(0)
+                                setlineinfo([])
+                                }}>清空线路</Button>
+                                    <Button onClick={() => { publish('deletefeature_station', true) 
+                                setlinewithstation(0)
+
+                                }}>清空站点</Button>
                                 </Col>
                             </Row>
                             <Row gutters={4}>
                                 <Col>
                                     <Button onClick={() => { publish('download_line', true) }} disabled={lineinfo.length === 0}>导出线路</Button>
-                                    <Button onClick={() => { publish('download_station', true) }} disabled={node_new.length === 0}>导出站点</Button>
+                                    <Button onClick={() => { publish('download_station', true) }} disabled={lineinfo.length === 0}>导出站点</Button>
                                     <Upload showUploadList={false} beforeUpload={handleupload_line}><Button disabled={!importline}>导入线路</Button></Upload>
                                     <Upload showUploadList={false} beforeUpload={handleupload_station}><Button disabled={!importstation}>导入站点</Button></Upload>
                                 </Col>
