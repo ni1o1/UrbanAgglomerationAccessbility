@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Col, Card, Collapse, Slider, Tooltip, Row, Switch, Button, Descriptions, message, Upload } from 'antd';
+import { Col, Card, Collapse, Slider, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
 import axios from 'axios';
 import {
     InfoCircleOutlined
@@ -75,13 +75,13 @@ export default function Hourlytraj() {
         features: []
     });
 
-    const transfernode = (data,lineinfo) => {
+    const transfernode = (data, lineinfo) => {
         setstationCollection(data)
         let stationcount = {}
         data.features.map(v => stationcount[v.properties.index] = stationcount[v.properties.index] == undefined ? 1 : stationcount[v.properties.index] + 1)
 
         Object.keys(stationcount).forEach(key => lineinfo[key].stations = stationcount[key])
-        
+
         setlineinfo(lineinfo)
         if (data.features.length > 0) {
             //处理节点
@@ -117,7 +117,8 @@ export default function Hourlytraj() {
                     //距离
                     const distance = Math.abs(thislinestation[j + 1].properties.location - thislinestation[j].properties.location)
                     //出行时长
-                    const traveltime = 60 * distance / travelspeed
+                    const traveltime = 60 * distance / lineinfo[i].speed
+                    console.log(lineinfo[i].speed)
                     //添加双向边
                     newedge.push([newpointid1, newpointid2, traveltime])
                     newedge.push([newpointid2, newpointid1, traveltime])
@@ -132,14 +133,18 @@ export default function Hourlytraj() {
     //地图编辑时发布的站点信息
     unsubscribe('stationCollection')
     useSubscribe('stationCollection', function (msg: any, data: any) {
-        console.log(data)
-        transfernode(data,lineinfo)
+        transfernode(data, lineinfo)
     });
     //地图编辑时发布的线路信息
     unsubscribe('linkCollection')
     useSubscribe('linkCollection', function (msg: any, data: any) {
         setlinkCollection(data)
-        setlineinfo(data.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
+        setlineinfo(data.features.map((f, index) => {
+            if (lineinfo[index] == undefined) {
+                return { lineid: f.properties.lineid, length: length(f), speed: travelspeed }
+            } else { 
+                return { lineid: f.properties.lineid, length: length(f), speed: lineinfo[index].speed } }
+        }))
         setlinewithstation(data.features.length)
     });
     const [showdiff, setshowdiff] = useState(false)
@@ -160,7 +165,7 @@ export default function Hourlytraj() {
                 linkCollection.features = linkCollection.features.concat(data.features.map((f) => { f.properties.lineid = f.properties.lineid + lineinfo.length; return f }))
                 setlinkCollection(linkCollection)
                 publish('uploadlinedata', linkCollection)
-                setlineinfo(linkCollection.features.map(f => { return { lineid: f.properties.lineid, length: length(f) } }))
+                setlineinfo(linkCollection.features.map(f => { return { lineid: f.properties.lineid, length: length(f), speed: travelspeed } }))
                 setimportline(false)
                 setimportstation(true)
             }
@@ -178,11 +183,19 @@ export default function Hourlytraj() {
                 stationCollection.features = stationCollection.features.concat(data.features.map((f) => { f.properties.index = f.properties.index + linewithstation; return f }))
                 setlinewithstation(lineinfo.length)
                 publish('uploadstationdata', stationCollection)
-                transfernode(stationCollection,lineinfo)
+                transfernode(stationCollection, lineinfo)
                 setimportline(true)
                 setimportstation(false)
             }
         })
+    }
+
+    const onlinespeedChange = (lineid) => {
+        return (v) => {
+            lineinfo[lineid - 1].speed = v
+            setlineinfo(lineinfo)
+            transfernode(stationCollection, lineinfo)
+        }
     }
     return (
         <>
@@ -222,14 +235,16 @@ export default function Hourlytraj() {
                                         message.info('已打开编辑模式，请在地图上绘制以添加线路')
                                         publish('startedit', true)
                                     }}>添加线路</Button>
-                                    <Button onClick={() => { publish('deletefeature', true)
-                                setlinewithstation(0)
-                                setlineinfo([])
-                                }}>清空线路</Button>
-                                    <Button onClick={() => { publish('deletefeature_station', true) 
-                                setlinewithstation(0)
+                                    <Button onClick={() => {
+                                        publish('deletefeature', true)
+                                        setlinewithstation(0)
+                                        setlineinfo([])
+                                    }}>清空线路</Button>
+                                    <Button onClick={() => {
+                                        publish('deletefeature_station', true)
+                                        setlinewithstation(0)
 
-                                }}>清空站点</Button>
+                                    }}>清空站点</Button>
                                 </Col>
                             </Row>
                             <Row gutters={4}>
@@ -241,30 +256,12 @@ export default function Hourlytraj() {
                                 </Col>
                             </Row>
                             <br />
-                            <Row>
-                                <Col span={10}>
-                                    运行速度:{travelspeed}km/h
-                                </Col>
-                                <Col span={14}>
-                                    <Slider
-                                        min={30}
-                                        max={400}
-                                        onChange={(v) => {
-                                            settravelspeed(v)
-                                        }}
-                                        value={typeof travelspeed === 'number' ? travelspeed : 0}
-                                        step={5}
-                                    />
-
-                                </Col>
-
-                            </Row>
 
                             {lineinfo.map(f =>
                                 <Descriptions title={`线路ID:${f.lineid}`}>
                                     <Descriptions.Item label="站点数" span={1}>{f.stations == undefined ? 0 : f.stations}</Descriptions.Item>
                                     <Descriptions.Item label="线路长度" span={1}>{f.length.toFixed(2)}km</Descriptions.Item>
-                                    <Descriptions.Item label="线路车速" span={1}>{travelspeed}km/h</Descriptions.Item>
+                                    <Descriptions.Item label="线路车速" span={1}><InputNumber size="small" defaultValue={f.speed} addonAfter='km/h' onChange={onlinespeedChange(f.lineid)} step={10} /></Descriptions.Item>
                                 </Descriptions>)}
 
                         </Panel>
