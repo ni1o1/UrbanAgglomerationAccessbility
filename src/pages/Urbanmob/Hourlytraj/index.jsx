@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { Col, Card, Collapse, Select, Menu, Dropdown, Table, Tooltip, Row, Switch, Button, Descriptions, message, Upload, InputNumber } from 'antd';
 import axios from 'axios';
 import {
-    InfoCircleOutlined, DownOutlined
+    InfoCircleOutlined, DownOutlined, DownloadOutlined
 } from '@ant-design/icons';
-
+import { downloadFile } from '@/utils/downloadFile';
 import { useSubscribe, usePublish, useUnsubscribe } from '@/utils/usePubSub';
 import { length } from '@turf/turf'
 import useWebWorker from "react-webworker-hook";
@@ -199,7 +199,7 @@ export default function Hourlytraj() {
             }
         })
     }
-
+    //更改每条线路的速度
     const onlinespeedChange = (lineid) => {
         return (v) => {
             lineinfo[lineid - 1].speed = v
@@ -207,7 +207,23 @@ export default function Hourlytraj() {
             transfernode(stationCollection, lineinfo)
         }
     }
-
+    //下载每条线路的线路站点
+    const ondownloadline = (lineid) => {
+        return (v) => {
+            downloadFile({
+                type: 'FeatureCollection',
+                features: linkCollection.features.filter(v => v.properties.lineid == lineid)
+            }, 'line' + lineid)
+        }
+    }
+    const ondownloadstation = (lineid) => {
+        return (v) => {
+            downloadFile({
+                type: 'FeatureCollection',
+                features: stationCollection.features.filter(v => v.properties.index == lineid - 1)
+            }, 'station' + lineid)
+        }
+    }
     const [vmin, setvmin] = useState(180)
     const [vmax, setvmax] = useState(300)
     const handlerankChange = ({ key }) => {
@@ -232,21 +248,23 @@ export default function Hourlytraj() {
         })
         publish('rank', data)
     }
+
+
     return (
         <>
             <Col span={24}>
-                <Card title="城市群交通可达性" extra={                   <Dropdown overlay={<Menu onClick={handlerankChange}>
-                        <Menu.Item key="rank1">1层社区</Menu.Item>
-                        <Menu.Item key="rank2">2层社区</Menu.Item>
-                        <Menu.Item key="rank3">3层社区</Menu.Item>
-                    </Menu>}>
-                        <Button type='text' onClick={e => e.preventDefault()}>
-                            <DownOutlined />
-                        </Button>
-                    </Dropdown>}
+                <Card title="城市群交通可达性" extra={<Dropdown overlay={<Menu onClick={handlerankChange}>
+                    <Menu.Item key="rank1">1层社区</Menu.Item>
+                    <Menu.Item key="rank2">2层社区</Menu.Item>
+                    <Menu.Item key="rank3">3层社区</Menu.Item>
+                </Menu>}>
+                    <Button type='text' onClick={e => e.preventDefault()}>
+                        <DownOutlined />
+                    </Button>
+                </Dropdown>}
                     bordered={false}>
                     <Collapse defaultActiveKey={['panel1', 'panel2', 'panel3']}>
-                    <Panel header="可达性计算" key="panel3"
+                        <Panel header="可达性计算" key="panel3"
                             extra={<Tooltip title='平均出行时间计算方法：获得每个社区到其他所有社区的铁路+出租车交通方式出行时长，再计算平均值得到'><InfoCircleOutlined /></Tooltip>} >
 
                             <Descriptions size="small" bordered title="交通拓扑网络信息">
@@ -293,31 +311,36 @@ export default function Hourlytraj() {
                                     }}>添加线路</Button>
                                     <Button onClick={() => {
                                         publish('deletefeature', true)
+                                        publish('deletefeature_station', true)
                                         setlinewithstation(0)
                                         setlineinfo([])
-                                    }}>清空线路</Button>
+                                        setimportline(true)
+                                        setimportstation(false)
+                                    }} disabled={linkCollection.features.length==0}>清空线路</Button>
                                     <Button onClick={() => {
                                         publish('deletefeature_station', true)
                                         setlinewithstation(0)
+                                    }} disabled={stationCollection.features.length==0}>清空站点</Button>
+                                    <Upload showUploadList={false} beforeUpload={handleupload_line}><Button disabled={!importline}>导入线路</Button></Upload>
+                                    <Upload showUploadList={false} beforeUpload={handleupload_station}><Button disabled={!importstation}>导入站点</Button></Upload>
 
-                                    }}>清空站点</Button>
                                 </Col>
                             </Row>
                             <Row gutters={4}>
                                 <Col>
-                                    <Button onClick={() => { publish('download_line', true) }} disabled={lineinfo.length === 0}>导出线路</Button>
-                                    <Button onClick={() => { publish('download_station', true) }} disabled={lineinfo.length === 0}>导出站点</Button>
-                                    <Upload showUploadList={false} beforeUpload={handleupload_line}><Button disabled={!importline}>导入线路</Button></Upload>
-                                    <Upload showUploadList={false} beforeUpload={handleupload_station}><Button disabled={!importstation}>导入站点</Button></Upload>
                                 </Col>
                             </Row>
                             <br />
                             {linkCollection.features.length >= 1 ? <Table size='small' footer={() => {
-                                return `共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`
+                                return <>{`共计${linkCollection.features.length}条线路，总长度${length(linkCollection).toFixed(2)}km`}                                    <Button onClick={() => { publish('download_line', true) }} disabled={lineinfo.length === 0}>导出全部线路</Button>
+                                    <Button onClick={() => { publish('download_station', true) }} disabled={lineinfo.length === 0}>导出全部站点</Button></>
                             }} dataSource={lineinfo.map(f => {
                                 return {
-                                    lineid: f.lineid, stations: f.stations == undefined ? 0 : f.stations, length: f.length.toFixed(2),
-                                    speed: <InputNumber style={{ width: '100px' }} min={1} size="small" defaultValue={f.speed} onChange={onlinespeedChange(f.lineid)} step={10} />
+                                    lineid: f.lineid,
+                                    stations: f.stations == undefined ? 0 : f.stations,
+                                    length: f.length.toFixed(2),
+                                    speed: <InputNumber style={{ width: '100px' }} min={1} size="small" defaultValue={f.speed} onChange={onlinespeedChange(f.lineid)} step={10} />,
+                                    output: <><Button onClick={ondownloadline(f.lineid)}>线路</Button><Button onClick={ondownloadstation(f.lineid)}>站点</Button></>
                                 }
                             })} columns={[
                                 {
@@ -338,10 +361,14 @@ export default function Hourlytraj() {
                                     title: '运营速度(km/h)',
                                     dataIndex: 'speed',
                                     key: 'speed',
+                                }, {
+                                    title: '导出',
+                                    dataIndex: 'output',
+                                    key: 'output',
                                 },
                             ]} /> : <></>}
                         </Panel>
-                        
+
                     </Collapse>
                 </Card>
             </Col>

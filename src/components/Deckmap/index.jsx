@@ -6,6 +6,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { _SunLight as SunLight } from '@deck.gl/core';
 import { AmbientLight, LightingEffect } from '@deck.gl/core';
 import DeckGL from '@deck.gl/react';
+import {downloadFile} from '@/utils/downloadFile';
 import { useSubscribe, usePublish, useUnsubscribe } from '@/utils/usePubSub';
 import { useInterval } from 'ahooks';
 import axios from 'axios';
@@ -281,17 +282,6 @@ export default function Deckmap() {
 */
   //#region
   //导出
-  const downloadFile = async (myData, fileName) => {
-    const json = JSON.stringify(myData);
-    const blob = new Blob([json], { type: 'application/json' });
-    const href = await URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = href;
-    link.download = fileName + ".json";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
   unsubscribe('download_access_res')
   useSubscribe('download_access_res', function (msg: any, data: any) {
     downloadFile(rank, "access_result")
