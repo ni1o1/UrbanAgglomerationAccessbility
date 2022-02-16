@@ -177,6 +177,7 @@ export default function Hourlytraj() {
                 }))
                 setimportline(false)
                 setimportstation(true)
+                message.info('请导入该线路的站点，或点击线路以添加站点')
             }
         })
     }

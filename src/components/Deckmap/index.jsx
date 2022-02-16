@@ -294,7 +294,8 @@ export default function Deckmap() {
   }
   unsubscribe('download_access_res')
   useSubscribe('download_access_res', function (msg: any, data: any) {
-    downloadFile(access_res, "access_res")
+    downloadFile(rank, "access_result")
+    //downloadFile(access_res, "access_res")
   })
   unsubscribe('download_line')
   useSubscribe('download_line', function (msg: any, data: any) {
@@ -372,7 +373,7 @@ export default function Deckmap() {
     const editType = e.editType
     if ((editType == 'addFeature')) {
       //为线路添加id
-      message.info('线路创建成功！创建线路后需要点击线路以添加站点，创建2个以上站点才能生效')
+      message.info('线路创建成功！请点击线路以添加站点，创建2个以上站点才能生效')
       const lineid = linkCollection.features.length + 1
       updatedData.features[updatedData.features.length - 1].properties['lineid'] = lineid
       setdrawmode(1)
