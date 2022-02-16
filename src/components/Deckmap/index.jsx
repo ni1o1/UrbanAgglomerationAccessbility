@@ -232,30 +232,46 @@ export default function Deckmap() {
     axios.get(`data/${data}_reshape_simplify.json`).then(response => {
       const rank2_reshape = response.data
       setrank(rank2_reshape)
-      //加载可达性
-      if(data=='rank1'){
-        setvmin(300)
-        setvmax(500)
-      }else if(data=='rank2'){
-        setvmin(180)
-        setvmax(300)
-      }else if(data=='rank3'){
-        setvmin(120)
-        setvmax(300)
-      }
       return rank2_reshape
     }).then((rank2_reshape) => {
       setTimeout(() => { 
         axios.get(`data/access_res_${data}.json`).then(response => {
           setorigin_access_res(response.data)
           if(data=='rank1'){
+            setvmin(300)
+            setvmax(500)
             regeneraterank(rank2_reshape, response.data, 300, 500)
+            setViewState({
+              ...viewState,
+              longitude: 116.691,
+              latitude: 30.6011,
+              zoom: 6.5,})
           }else if(data=='rank2'){
+            setvmin(180)
+            setvmax(300)
             regeneraterank(rank2_reshape, response.data, 180, 300)
+            setViewState({
+              ...viewState,
+              longitude: 116.691,
+              latitude: 30.6011,
+              zoom: 6.5,})
           }else if(data=='rank3'){
+            setvmin(120)
+            setvmax(300)
             regeneraterank(rank2_reshape, response.data, 120, 300)
+            setViewState({
+              ...viewState,
+              longitude: 116.691,
+              latitude: 30.6011,
+              zoom: 6.5,})
+          }else if(data=='tokyo'){
+            setvmin(30)
+            setvmax(60)
+            regeneraterank(rank2_reshape, response.data, 30, 60)
+            setViewState({
+              ...viewState,
+            longitude:139.5914,latitude:35.6511,zoom:11})
           }
-          
         })
       },100)
     })

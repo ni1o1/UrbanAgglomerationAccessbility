@@ -177,7 +177,7 @@ export default function Hourlytraj() {
                 }))
                 setimportline(false)
                 setimportstation(true)
-                message.info('请导入该线路的站点，或点击线路以添加站点')
+                message.info('请导入该线路的站点或点击线路以添加站点')
             }
         })
     }
@@ -237,7 +237,10 @@ export default function Hourlytraj() {
         } else if (data == 'rank3') {
             setvmin(120)
             setvmax(300)
-        }
+        }else if(data=='tokyo'){
+            setvmin(30)
+            setvmax(60)
+          }
         axios.get(`data/edge_renumbered_${data}.json`).then(response => {
             setedge_renumbered(response.data)
         }).then(() => {
@@ -257,6 +260,7 @@ export default function Hourlytraj() {
                     <Menu.Item key="rank1">1层社区</Menu.Item>
                     <Menu.Item key="rank2">2层社区</Menu.Item>
                     <Menu.Item key="rank3">3层社区</Menu.Item>
+                    <Menu.Item key="tokyo">东京</Menu.Item>
                 </Menu>}>
                     <Button type='text' onClick={e => e.preventDefault()}>
                         <DownOutlined />
