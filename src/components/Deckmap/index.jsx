@@ -184,7 +184,7 @@ export default function Deckmap() {
       v.properties.access = parseInt(access_res[f.properties.groupname])
       v.properties.color = cmap(parseInt(access_res[f.properties.groupname]), vmin, vmax)
       return v
-    })
+    }).filter(f=>f.properties.access>0)
     setrank({ type: "FeatureCollection", features: tmp })
   }
   const [isextrude, setisextrude] = useState(false)
@@ -271,6 +271,13 @@ export default function Deckmap() {
             setViewState({
               ...viewState,
             longitude:139.5914,latitude:35.6511,zoom:11})
+          }else if(data=='tokyo_all'){
+            setvmin(90)
+            setvmax(180)
+            regeneraterank(rank2_reshape, response.data, 90, 180)
+            setViewState({
+              ...viewState,
+            longitude:139.5914,latitude:35.6511,zoom:9})
           }
         })
       },100)
@@ -300,8 +307,8 @@ export default function Deckmap() {
   //导出
   unsubscribe('download_access_res')
   useSubscribe('download_access_res', function (msg: any, data: any) {
-    downloadFile(rank, "access_result")
-    //downloadFile(access_res, "access_res")
+    //downloadFile(rank, "access_result")
+    downloadFile(access_res, "access_res")
   })
   unsubscribe('download_line')
   useSubscribe('download_line', function (msg: any, data: any) {

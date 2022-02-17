@@ -240,6 +240,9 @@ export default function Hourlytraj() {
         }else if(data=='tokyo'){
             setvmin(30)
             setvmax(60)
+          }else if(data=='tokyo_all'){
+            setvmin(90)
+            setvmax(180)
           }
         axios.get(`data/edge_renumbered_${data}.json`).then(response => {
             setedge_renumbered(response.data)
@@ -261,6 +264,7 @@ export default function Hourlytraj() {
                     <Menu.Item key="rank2">2层社区</Menu.Item>
                     <Menu.Item key="rank3">3层社区</Menu.Item>
                     <Menu.Item key="tokyo">东京</Menu.Item>
+                    <Menu.Item key="tokyo_all">东京都市圈</Menu.Item>
                 </Menu>}>
                     <Button type='text' onClick={e => e.preventDefault()}>
                         <DownOutlined />
