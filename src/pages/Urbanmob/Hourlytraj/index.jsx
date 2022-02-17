@@ -260,14 +260,14 @@ export default function Hourlytraj() {
         <>
             <Col span={24}>
                 <Card title="城市群交通可达性" extra={<Dropdown overlay={<Menu onClick={handlerankChange}>
-                    <Menu.Item key="rank1">1层社区</Menu.Item>
+                    {/* <Menu.Item key="rank1">1层社区</Menu.Item> */}
                     <Menu.Item key="rank2">2层社区</Menu.Item>
                     <Menu.Item key="rank3">3层社区</Menu.Item>
                     <Menu.Item key="tokyo">东京</Menu.Item>
                     <Menu.Item key="tokyo_all">东京都市圈</Menu.Item>
                 </Menu>}>
                     <Button type='text' onClick={e => e.preventDefault()}>
-                        <DownOutlined />
+                        切换场景<DownOutlined />
                     </Button>
                 </Dropdown>}
                     bordered={false}>
