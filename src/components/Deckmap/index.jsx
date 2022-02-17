@@ -177,7 +177,7 @@ export default function Deckmap() {
   });
 
   //由可达性获得社区
-  const regeneraterank = (rank, access_res, vmin, vmax) => {
+  const regeneraterank = (rank, access_res, vmin, vmax,filter=false) => {
 
     let tmp = rank.features.map(f => {
       let v = f
@@ -185,6 +185,9 @@ export default function Deckmap() {
       v.properties.color = cmap(parseInt(access_res[f.properties.groupname]), vmin, vmax)
       return v
     })
+    if (filter){
+      tmp=tmp.filter(f=>f.properties.access>0)
+    }
     setrank({ type: "FeatureCollection", features: tmp })
   }
   const [isextrude, setisextrude] = useState(false)
@@ -201,7 +204,7 @@ export default function Deckmap() {
 
 
   //获取社区并加载
-  useState(() => {
+  useEffect(() => {
     //加载社区
     axios.get('data/rank2_reshape_simplify.json').then(response => {
       const rank2_reshape = response.data
@@ -211,7 +214,7 @@ export default function Deckmap() {
     }).then((rank2_reshape) => {
       axios.get('data/access_res_rank2.json').then(response => {
         setorigin_access_res(response.data)
-        regeneraterank(rank2_reshape, response.data, vmin, vmax)
+        regeneraterank(rank2_reshape, response.data, vmin, vmax,true)
       })
     })
     //加载铁路线
@@ -240,7 +243,7 @@ export default function Deckmap() {
           if (data == 'rank1') {
             setvmin(300)
             setvmax(500)
-            regeneraterank(rank2_reshape, response.data, 300, 500)
+            regeneraterank(rank2_reshape, response.data, 300, 500,true)
             setViewState({
               ...viewState,
               longitude: 116.691,
@@ -250,7 +253,7 @@ export default function Deckmap() {
           } else if (data == 'rank2') {
             setvmin(180)
             setvmax(300)
-            regeneraterank(rank2_reshape, response.data, 180, 300)
+            regeneraterank(rank2_reshape, response.data, 180, 300,true)
             setViewState({
               ...viewState,
               longitude: 116.691,
@@ -260,7 +263,7 @@ export default function Deckmap() {
           } else if (data == 'rank3') {
             setvmin(120)
             setvmax(300)
-            regeneraterank(rank2_reshape, response.data, 120, 300)
+            regeneraterank(rank2_reshape, response.data, 120, 300,true)
             setViewState({
               ...viewState,
               longitude: 116.691,
@@ -270,7 +273,7 @@ export default function Deckmap() {
           } else if (data == 'tokyo') {
             setvmin(30)
             setvmax(60)
-            regeneraterank(rank2_reshape, response.data, 30, 60)
+            regeneraterank(rank2_reshape, response.data, 30, 60,true)
             setViewState({
               ...viewState,
               longitude: 139.5914, latitude: 35.6511, zoom: 11
@@ -278,7 +281,7 @@ export default function Deckmap() {
           } else if (data == 'tokyo_all') {
             setvmin(90)
             setvmax(180)
-            regeneraterank(rank2_reshape, response.data, 90, 180)
+            regeneraterank(rank2_reshape, response.data, 90, 180,true)
             setViewState({
               ...viewState,
               longitude: 139.5914, latitude: 35.6511, zoom: 9
