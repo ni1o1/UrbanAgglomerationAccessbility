@@ -315,8 +315,11 @@ export default function Deckmap() {
   //导出
   unsubscribe('download_access_res')
   useSubscribe('download_access_res', function (msg: any, data: any) {
-    //downloadFile(rank, "access_result")
     downloadFile(access_res, "access_res")
+  })
+  unsubscribe('download_access_result')
+  useSubscribe('download_access_result', function (msg: any, data: any) {
+    downloadFile(rank, "access_result")
   })
   unsubscribe('download_line')
   useSubscribe('download_line', function (msg: any, data: any) {

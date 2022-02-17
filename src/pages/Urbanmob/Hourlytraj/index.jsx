@@ -302,6 +302,9 @@ export default function Hourlytraj() {
                                 <Col span={12}>
                                     <Button type="primary" onClick={calculateaccessbility}>计算可达性</Button>
                                     <Button onClick={() => {
+                                        publish('download_access_result', true)
+                                    }}>导出geojson</Button>
+                                      <Button onClick={() => {
                                         publish('download_access_res', true)
                                     }}>导出可达性</Button>
                                 </Col>
