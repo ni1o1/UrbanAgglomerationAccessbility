@@ -6,7 +6,7 @@ import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 import { _SunLight as SunLight } from '@deck.gl/core';
 import { AmbientLight, LightingEffect } from '@deck.gl/core';
 import DeckGL from '@deck.gl/react';
-import {downloadFile} from '@/utils/downloadFile';
+import { downloadFile } from '@/utils/downloadFile';
 import { useSubscribe, usePublish, useUnsubscribe } from '@/utils/usePubSub';
 import { useInterval } from 'ahooks';
 import axios from 'axios';
@@ -179,12 +179,12 @@ export default function Deckmap() {
   //由可达性获得社区
   const regeneraterank = (rank, access_res, vmin, vmax) => {
 
-    const tmp = rank.features.map(f => {
+    let tmp = rank.features.map(f => {
       let v = f
       v.properties.access = parseInt(access_res[f.properties.groupname])
       v.properties.color = cmap(parseInt(access_res[f.properties.groupname]), vmin, vmax)
       return v
-    }).filter(f=>f.properties.access>0)
+    })
     setrank({ type: "FeatureCollection", features: tmp })
   }
   const [isextrude, setisextrude] = useState(false)
@@ -211,7 +211,7 @@ export default function Deckmap() {
     }).then((rank2_reshape) => {
       axios.get('data/access_res_rank2.json').then(response => {
         setorigin_access_res(response.data)
-        regeneraterank(rank2_reshape, response.data,vmin, vmax)
+        regeneraterank(rank2_reshape, response.data, vmin, vmax)
       })
     })
     //加载铁路线
@@ -234,10 +234,10 @@ export default function Deckmap() {
       setrank(rank2_reshape)
       return rank2_reshape
     }).then((rank2_reshape) => {
-      setTimeout(() => { 
+      setTimeout(() => {
         axios.get(`data/access_res_${data}.json`).then(response => {
           setorigin_access_res(response.data)
-          if(data=='rank1'){
+          if (data == 'rank1') {
             setvmin(300)
             setvmax(500)
             regeneraterank(rank2_reshape, response.data, 300, 500)
@@ -245,8 +245,9 @@ export default function Deckmap() {
               ...viewState,
               longitude: 116.691,
               latitude: 30.6011,
-              zoom: 6.5,})
-          }else if(data=='rank2'){
+              zoom: 6.5,
+            })
+          } else if (data == 'rank2') {
             setvmin(180)
             setvmax(300)
             regeneraterank(rank2_reshape, response.data, 180, 300)
@@ -254,8 +255,9 @@ export default function Deckmap() {
               ...viewState,
               longitude: 116.691,
               latitude: 30.6011,
-              zoom: 6.5,})
-          }else if(data=='rank3'){
+              zoom: 6.5,
+            })
+          } else if (data == 'rank3') {
             setvmin(120)
             setvmax(300)
             regeneraterank(rank2_reshape, response.data, 120, 300)
@@ -263,24 +265,27 @@ export default function Deckmap() {
               ...viewState,
               longitude: 116.691,
               latitude: 30.6011,
-              zoom: 6.5,})
-          }else if(data=='tokyo'){
+              zoom: 6.5,
+            })
+          } else if (data == 'tokyo') {
             setvmin(30)
             setvmax(60)
             regeneraterank(rank2_reshape, response.data, 30, 60)
             setViewState({
               ...viewState,
-            longitude:139.5914,latitude:35.6511,zoom:11})
-          }else if(data=='tokyo_all'){
+              longitude: 139.5914, latitude: 35.6511, zoom: 11
+            })
+          } else if (data == 'tokyo_all') {
             setvmin(90)
             setvmax(180)
             regeneraterank(rank2_reshape, response.data, 90, 180)
             setViewState({
               ...viewState,
-            longitude:139.5914,latitude:35.6511,zoom:9})
+              longitude: 139.5914, latitude: 35.6511, zoom: 9
+            })
           }
         })
-      },100)
+      }, 100)
     })
   })
   //colormap的设置
