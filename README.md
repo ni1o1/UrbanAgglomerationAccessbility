@@ -5,6 +5,7 @@
 ## 视频介绍
 
 - [bilibili](https://www.bilibili.com/video/BV19L411K7qr/)
+- [Youtube](https://www.youtube.com/watch?v=XNQuhpW0xCg)
 
 ## 样例数据
 
