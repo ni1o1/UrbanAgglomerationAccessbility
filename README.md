@@ -1,6 +1,6 @@
 # 城市群可达性分析系统
 
-可交互实时计算的城市群可达性分析系统，快速评估交通基础设施建设所带来的可达性提升。点击[这个页面](https://ni1o1.github.io/UrbanAgglomerationAccessbility/build/)可看到Demo。
+可交互实时计算的城市群可达性分析系统，快速评估交通基础设施建设所带来的可达性提升。系统链接在[这个页面](https://ni1o1.github.io/UrbanAgglomerationAccessbility/build/)。
 
 ![1645149762774.png](image/README/1645149762774.png)
 
