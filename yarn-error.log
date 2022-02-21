@@ -1,5 +1,5 @@
 Arguments: 
-  /usr/local/bin/node /Users/yuqing/.npm-global/bin/yarn add react-hooks-worker
+  /usr/local/bin/node /Users/yuqing/.npm-global/bin/yarn start
 
 PATH: 
   /opt/anaconda3/bin:/opt/anaconda3/condabin:/opt/homebrew/opt/php@7.4/bin:/usr/local/node_global/bin:/Users/yuqing/.npm-global/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/mysql/bin
@@ -14,8 +14,12 @@ Platform:
   darwin arm64
 
 Trace: 
-  Error: getaddrinfo ENOTFOUND cdn.npmmirror.com
-      at GetAddrInfoReqWrap.onlookup [as oncomplete] (node:dns:71:26)
+  SyntaxError: /Library/WebServer/Documents/UrbanAgglomerationAccessbility/package.json: Unexpected token } in JSON at position 2638
+      at JSON.parse (<anonymous>)
+      at /Users/yuqing/.npm-global/lib/node_modules/yarn/lib/cli.js:1625:59
+      at Generator.next (<anonymous>)
+      at step (/Users/yuqing/.npm-global/lib/node_modules/yarn/lib/cli.js:310:30)
+      at /Users/yuqing/.npm-global/lib/node_modules/yarn/lib/cli.js:321:13
 
 npm manifest: 
   {
@@ -68,6 +72,7 @@ npm manifest:
           "react-map-gl-draw": "^1.0.2-alpha.0",
           "react-router-dom": "^6.2.1",
           "react-scripts": "5.0.0",
+          "react-webworker-hook": "^0.2.1",
           "turf": "^3.0.14",
           "web-vitals": "^2.1.3",
           "worker-loader": "^3.0.8"
@@ -104,7 +109,6 @@ npm manifest:
       "devDependencies": {
           "mini-css-extract-plugin": "2.4.5"
       },
-      "proxy": "http://localhost:8080"
   }
 
 yarn manifest: 
@@ -11386,6 +11390,11 @@ Lockfile:
     version "1.0.6"
     resolved "https://registry.npmmirror.com/react-virtualized-auto-sizer/download/react-virtualized-auto-sizer-1.0.6.tgz#66c5b1c9278064c5ef1699ed40a29c11518f97ca"
     integrity sha1-ZsWxySeAZMXvFpntQKKcEVGPl8o=
+  
+  react-webworker-hook@^0.2.1:
+    version "0.2.1"
+    resolved "https://registry.npmmirror.com/react-webworker-hook/-/react-webworker-hook-0.2.1.tgz#cf1d7457d135a18f7cbb4a63b46a4939417829e5"
+    integrity sha512-tBpGuMFdKF8CyQ4eJ9kFFgfvtPyysi5HXQ3kClpOOKWywHDYA8agd+B3X2VP5Kpt8XwB91DkNV5rnuqCa2LTyQ==
   
   react@^17.0.2:
     version "17.0.2"
