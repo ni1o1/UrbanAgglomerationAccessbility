@@ -71,9 +71,7 @@ function calculate_floyd(edge_all, node_all) {
         graphA.addEdge(f[1], f[0], f[2])
     })
     graphA.floyd();
-    const newaccess_res = graphA.showFloyf(node_all);
-
-    return newaccess_res
+    return { access_res: graphA.showFloyf(node_all), shortest_path: graphA.dist }
 }
 
 onmessage = ({ data }) => {
